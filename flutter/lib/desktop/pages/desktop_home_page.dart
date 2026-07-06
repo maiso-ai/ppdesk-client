@@ -64,6 +64,8 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   final _ppDeskTextController = TextEditingController();
   final _ppDeskDeviceSearchController = TextEditingController();
   final _ppDeskDeviceSearchFocusNode = FocusNode();
+  final _ppDeskSessionSearchController = TextEditingController();
+  final _ppDeskSessionSearchFocusNode = FocusNode();
   final _ppDeskAllPeersLoader = AllPeersLoader();
   final RxBool _ppDeskIdFocused = false.obs;
   Iterable<Peer> _ppDeskAutocompleteOpts = const [];
@@ -72,6 +74,9 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   String _ppDeskDeviceGroup = 'all';
   String _ppDeskDevicePlatform = 'all';
   String _ppDeskDeviceStatus = 'all';
+  String _ppDeskSessionSearch = '';
+  String _ppDeskSessionType = 'all';
+  String _ppDeskSessionTime = 'all';
 
   @override
   Widget build(BuildContext context) {
@@ -181,8 +186,9 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               _PPDeskNavItem(
                 icon: 'ppdesk_clock',
                 label: '会话记录',
+                selected: _ppDeskPage == 2,
                 compact: compact,
-                onTap: () => gFFI.peerTabModel.setCurrentTab(0),
+                onTap: () => setState(() => _ppDeskPage = 2),
               ),
               _PPDeskNavItem(
                 icon: 'ppdesk_toolbox',
@@ -394,6 +400,12 @@ class _DesktopHomePageState extends State<DesktopHomePage>
             child: _buildPPDeskDeviceListPage(compact: compact),
           );
         }
+        if (_ppDeskPage == 2) {
+          return Padding(
+            padding: padding,
+            child: _buildPPDeskSessionPage(compact: compact),
+          );
+        }
         return Padding(
           padding: padding,
           child: Column(
@@ -448,9 +460,15 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       children: [
         _PPDeskRoundButton(
             icon: 'ppdesk_search',
-            onTap: () => _ppDeskPage == 1
-                ? _ppDeskDeviceSearchFocusNode.requestFocus()
-                : _ppDeskIdFocusNode.requestFocus()),
+            onTap: () {
+              if (_ppDeskPage == 1) {
+                _ppDeskDeviceSearchFocusNode.requestFocus();
+              } else if (_ppDeskPage == 2) {
+                _ppDeskSessionSearchFocusNode.requestFocus();
+              } else {
+                _ppDeskIdFocusNode.requestFocus();
+              }
+            }),
         const SizedBox(width: 16),
         Stack(
           clipBehavior: Clip.none,
@@ -938,6 +956,354 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     return formatID(peer.id);
   }
 
+  Widget _buildPPDeskSessionPage({required bool compact}) {
+    return AnimatedBuilder(
+      animation: Listenable.merge([
+        gFFI.recentPeersModel,
+        gFFI.favoritePeersModel,
+        gFFI.lanPeersModel,
+      ]),
+      builder: (context, _) {
+        final records = _ppDeskFilteredSessions(_ppDeskSessionRecords());
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('会话记录',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              fontSize: compact ? 28 : 34,
+                              height: 1.1,
+                              fontWeight: FontWeight.w900,
+                              color: const Color(0xFF101828))),
+                      SizedBox(height: compact ? 6 : 10),
+                      Text('查看远程控制与文件传输历史记录。',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              fontSize: compact ? 13 : 15,
+                              color: const Color(0xFF66738A))),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 18),
+                _buildPPDeskTopBar(),
+              ],
+            ),
+            SizedBox(height: compact ? 16 : 24),
+            _buildPPDeskSessionFilters(compact: compact),
+            SizedBox(height: compact ? 14 : 22),
+            Expanded(child: _buildPPDeskSessionSections(records, compact)),
+            SizedBox(height: compact ? 10 : 16),
+            _buildPPDeskSessionFooter(records.length, compact: compact),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildPPDeskSessionFilters({required bool compact}) {
+    return Row(
+      children: [
+        Expanded(
+          child: Container(
+            height: compact ? 44 : 52,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFE1E8F4)),
+            ),
+            child: Row(
+              children: [
+                const SizedBox(width: 14),
+                Expanded(
+                  child: TextField(
+                    controller: _ppDeskSessionSearchController,
+                    focusNode: _ppDeskSessionSearchFocusNode,
+                    autocorrect: false,
+                    enableSuggestions: false,
+                    style: TextStyle(
+                        fontSize: compact ? 13 : 14,
+                        color: const Color(0xFF101828)),
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      hintText: '搜索设备名称、设备 ID 或会话内容',
+                      hintStyle: TextStyle(color: Color(0xFFA1AEC2)),
+                    ),
+                    onChanged: (value) =>
+                        setState(() => _ppDeskSessionSearch = value),
+                  ).workaroundFreezeLinuxMint(),
+                ),
+                _ppDeskSvg('ppdesk_search',
+                    color: const Color(0xFF1F2A44), size: compact ? 18 : 20),
+                const SizedBox(width: 14),
+              ],
+            ),
+          ),
+        ),
+        SizedBox(width: compact ? 8 : 12),
+        _PPDeskFilterButton(
+          label: '会话类型',
+          value: _ppDeskSessionTypeLabel(_ppDeskSessionType),
+          compact: compact,
+          items: const {
+            'all': '全部类型',
+            'remote': '远程控制',
+            'file': '文件传输',
+          },
+          onChanged: (value) => setState(() => _ppDeskSessionType = value),
+        ),
+        SizedBox(width: compact ? 8 : 12),
+        _PPDeskFilterButton(
+          label: '时间',
+          value: _ppDeskSessionTimeLabel(_ppDeskSessionTime),
+          compact: compact,
+          items: const {
+            'all': '全部时间',
+            'today': '今天',
+            'yesterday': '昨天',
+            'earlier': '更早',
+          },
+          onChanged: (value) => setState(() => _ppDeskSessionTime = value),
+        ),
+        SizedBox(width: compact ? 10 : 14),
+        _PPDeskOutlineButton(
+          icon: 'ppdesk_download',
+          label: '导出记录',
+          compact: compact,
+          onTap: () => showToast('接入真实会话日志后可导出记录'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPPDeskSessionSections(
+      List<_PPDeskSessionRecord> records, bool compact) {
+    if (records.isEmpty) {
+      return Container(
+        decoration: _ppDeskCardDecoration(),
+        alignment: Alignment.center,
+        child: const Text('暂无匹配会话',
+            style: TextStyle(fontSize: 14, color: Color(0xFF7C8AA5))),
+      );
+    }
+    const groupLabels = {
+      'today': '今天',
+      'yesterday': '昨天',
+      'earlier': '更早',
+    };
+    return ListView(
+      padding: EdgeInsets.zero,
+      children: groupLabels.entries.expand((entry) {
+        final groupRecords =
+            records.where((record) => record.group == entry.key).toList();
+        if (groupRecords.isEmpty) {
+          return const <Widget>[];
+        }
+        return [
+          Padding(
+            padding: EdgeInsets.only(bottom: compact ? 8 : 12),
+            child: Text(entry.value,
+                style: TextStyle(
+                    fontSize: compact ? 14 : 16,
+                    fontWeight: FontWeight.w900,
+                    color: const Color(0xFF101828))),
+          ),
+          Container(
+            margin: EdgeInsets.only(bottom: compact ? 12 : 20),
+            decoration: _ppDeskCardDecoration(),
+            child: Column(
+              children: [
+                for (var i = 0; i < groupRecords.length; i++) ...[
+                  _PPDeskSessionRow(
+                    record: groupRecords[i],
+                    compact: compact,
+                    onOpen: () {
+                      _ppDeskIdController.id = groupRecords[i].peer.id;
+                      _ppDeskConnect(
+                          isFileTransfer: groupRecords[i].type == 'file');
+                    },
+                    onAction: (value) {
+                      _ppDeskIdController.id = groupRecords[i].peer.id;
+                      if (value == 'file') {
+                        _ppDeskConnect(isFileTransfer: true);
+                      } else if (value == 'connect') {
+                        _ppDeskConnect();
+                      } else {
+                        showToast('会话详情需接入真实会话日志');
+                      }
+                    },
+                  ),
+                  if (i != groupRecords.length - 1)
+                    const Divider(height: 1, color: Color(0xFFE8EEF8)),
+                ],
+              ],
+            ),
+          ),
+        ];
+      }).toList(),
+    );
+  }
+
+  Widget _buildPPDeskSessionFooter(int count, {required bool compact}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        Text('共 $count 条',
+            style: const TextStyle(fontSize: 13, color: Color(0xFF66738A))),
+        const SizedBox(width: 18),
+        Container(
+          height: compact ? 34 : 38,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: const Color(0xFFE1E8F4)),
+          ),
+          child: Row(
+            children: [
+              const Text('20 条/页',
+                  style: TextStyle(fontSize: 13, color: Color(0xFF66738A))),
+              const SizedBox(width: 10),
+              _ppDeskSvg('ppdesk_chevron_down',
+                  color: const Color(0xFF66738A), size: 16),
+            ],
+          ),
+        ),
+        const SizedBox(width: 16),
+        _PPDeskPagerButton(
+          icon: 'ppdesk_chevron_right',
+          flip: true,
+          compact: compact,
+          onTap: () => showToast('已经是第一页'),
+        ),
+        const SizedBox(width: 8),
+        Container(
+          width: compact ? 34 : 38,
+          height: compact ? 34 : 38,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: const Color(0xFF2D6BFF)),
+          ),
+          child: const Text('1',
+              style: TextStyle(
+                  color: Color(0xFF2D6BFF), fontWeight: FontWeight.w800)),
+        ),
+        const SizedBox(width: 8),
+        _PPDeskPagerButton(
+          icon: 'ppdesk_chevron_right',
+          compact: compact,
+          onTap: () => showToast('已经是最后一页'),
+        ),
+      ],
+    );
+  }
+
+  List<_PPDeskSessionRecord> _ppDeskSessionRecords() {
+    final peers = _ppDeskAllDevices();
+    const times = [
+      '10:24',
+      '09:45',
+      '08:30',
+      '昨天 16:20',
+      '昨天 14:12',
+      '昨天 11:05',
+      '05-10 19:32',
+      '05-08 22:18'
+    ];
+    const durations = [
+      '00:18:36',
+      '00:02:14',
+      '00:45:12',
+      '00:03:58',
+      '00:22:07',
+      '00:15:33',
+      '00:31:08',
+      '01:05:27'
+    ];
+    const files = ['项目说明.pdf', '部署日志.zip', '备份数据.tar'];
+    const sizes = ['12.4 MB', '68.7 MB', '256.3 MB'];
+    const colors = [
+      Color(0xFF2D6BFF),
+      Color(0xFF20C66B),
+      Color(0xFF7C3CFF),
+      Color(0xFFFF9F1C),
+    ];
+    return [
+      for (var i = 0; i < peers.length; i++)
+        _PPDeskSessionRecord(
+          peer: peers[i],
+          type: i % 3 == 1 ? 'file' : 'remote',
+          group: i < 3
+              ? 'today'
+              : i < 6
+                  ? 'yesterday'
+                  : 'earlier',
+          time: times[i % times.length],
+          duration: durations[i % durations.length],
+          status: i % 5 == 4
+              ? 'failed'
+              : i % 3 == 2
+                  ? 'interrupted'
+                  : 'success',
+          fileName: files[i % files.length],
+          fileSize: sizes[i % sizes.length],
+          color: colors[i % colors.length],
+        ),
+    ];
+  }
+
+  List<_PPDeskSessionRecord> _ppDeskFilteredSessions(
+      List<_PPDeskSessionRecord> records) {
+    final search =
+        _ppDeskSessionSearch.trim().toLowerCase().replaceAll(' ', '');
+    return records.where((record) {
+      if (_ppDeskSessionType != 'all' && record.type != _ppDeskSessionType) {
+        return false;
+      }
+      if (_ppDeskSessionTime != 'all' && record.group != _ppDeskSessionTime) {
+        return false;
+      }
+      if (search.isEmpty) {
+        return true;
+      }
+      final name = _ppDeskPeerName(record.peer).toLowerCase();
+      final id = record.peer.id.toLowerCase().replaceAll(' ', '');
+      final file = record.fileName.toLowerCase();
+      return name.contains(search) ||
+          id.contains(search) ||
+          file.contains(search);
+    }).toList();
+  }
+
+  String _ppDeskSessionTypeLabel(String value) {
+    return const {
+          'all': '全部类型',
+          'remote': '远程控制',
+          'file': '文件传输',
+        }[value] ??
+        '全部类型';
+  }
+
+  String _ppDeskSessionTimeLabel(String value) {
+    return const {
+          'all': '全部时间',
+          'today': '今天',
+          'yesterday': '昨天',
+          'earlier': '更早',
+        }[value] ??
+        '全部时间';
+  }
+
   Widget _buildPPDeskQuickConnect(BuildContext context,
       {required bool compact}) {
     return Container(
@@ -1253,7 +1619,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                           color: const Color(0xFF101828))),
                   const Spacer(),
                   InkWell(
-                    onTap: () => gFFI.peerTabModel.setCurrentTab(0),
+                    onTap: () => setState(() => _ppDeskPage = 2),
                     borderRadius: BorderRadius.circular(8),
                     child: Row(
                       children: [
@@ -2226,6 +2592,8 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     _ppDeskTextController.dispose();
     _ppDeskDeviceSearchFocusNode.dispose();
     _ppDeskDeviceSearchController.dispose();
+    _ppDeskSessionSearchFocusNode.dispose();
+    _ppDeskSessionSearchController.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -2543,6 +2911,125 @@ class _PPDeskSmallButtonState extends State<_PPDeskSmallButton> {
                       color: const Color(0xFF66738A),
                       fontWeight: FontWeight.w700)),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PPDeskOutlineButton extends StatefulWidget {
+  const _PPDeskOutlineButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    required this.compact,
+  });
+
+  final String icon;
+  final String label;
+  final VoidCallback onTap;
+  final bool compact;
+
+  @override
+  State<_PPDeskOutlineButton> createState() => _PPDeskOutlineButtonState();
+}
+
+class _PPDeskOutlineButtonState extends State<_PPDeskOutlineButton> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _hover ? const Color(0xFF2D6BFF) : const Color(0xFF344054);
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: InkWell(
+        onTap: widget.onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          height: widget.compact ? 44 : 52,
+          width: widget.compact ? 118 : 148,
+          padding: EdgeInsets.symmetric(horizontal: widget.compact ? 10 : 14),
+          decoration: BoxDecoration(
+            color: _hover ? const Color(0xFFF7FAFF) : Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+                color:
+                    _hover ? const Color(0xFFBFD0FF) : const Color(0xFFE1E8F4)),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SvgPicture.asset('assets/${widget.icon}.svg',
+                  width: 16,
+                  height: 16,
+                  colorFilter: ColorFilter.mode(color, BlendMode.srcIn)),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(widget.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        fontSize: widget.compact ? 12 : 13,
+                        color: color,
+                        fontWeight: FontWeight.w800)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PPDeskPagerButton extends StatefulWidget {
+  const _PPDeskPagerButton({
+    required this.icon,
+    required this.onTap,
+    required this.compact,
+    this.flip = false,
+  });
+
+  final String icon;
+  final VoidCallback onTap;
+  final bool compact;
+  final bool flip;
+
+  @override
+  State<_PPDeskPagerButton> createState() => _PPDeskPagerButtonState();
+}
+
+class _PPDeskPagerButtonState extends State<_PPDeskPagerButton> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: InkWell(
+        onTap: widget.onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          width: widget.compact ? 34 : 38,
+          height: widget.compact ? 34 : 38,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: _hover ? const Color(0xFFEAF0FF) : Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: const Color(0xFFE1E8F4)),
+          ),
+          child: Transform.rotate(
+            angle: widget.flip ? 3.14159 : 0,
+            child: SvgPicture.asset('assets/${widget.icon}.svg',
+                width: 16,
+                height: 16,
+                colorFilter: ColorFilter.mode(
+                    _hover ? const Color(0xFF2D6BFF) : const Color(0xFF66738A),
+                    BlendMode.srcIn)),
           ),
         ),
       ),
@@ -2970,6 +3457,273 @@ class _PPDeskRecentRowState extends State<_PPDeskRecentRow> {
       return peer.username;
     }
     return formatID(peer.id);
+  }
+}
+
+class _PPDeskSessionRecord {
+  const _PPDeskSessionRecord({
+    required this.peer,
+    required this.type,
+    required this.group,
+    required this.time,
+    required this.duration,
+    required this.status,
+    required this.fileName,
+    required this.fileSize,
+    required this.color,
+  });
+
+  final Peer peer;
+  final String type;
+  final String group;
+  final String time;
+  final String duration;
+  final String status;
+  final String fileName;
+  final String fileSize;
+  final Color color;
+
+  bool get isFile => type == 'file';
+}
+
+class _PPDeskSessionRow extends StatefulWidget {
+  const _PPDeskSessionRow({
+    required this.record,
+    required this.compact,
+    required this.onOpen,
+    required this.onAction,
+  });
+
+  final _PPDeskSessionRecord record;
+  final bool compact;
+  final VoidCallback onOpen;
+  final ValueChanged<String> onAction;
+
+  @override
+  State<_PPDeskSessionRow> createState() => _PPDeskSessionRowState();
+}
+
+class _PPDeskSessionRowState extends State<_PPDeskSessionRow> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final record = widget.record;
+    final status = _status(record.status);
+    final rowHeight = widget.compact ? 58.0 : 72.0;
+    final mutedStyle = TextStyle(
+        fontSize: widget.compact ? 12 : 13,
+        color: const Color(0xFF66738A),
+        fontWeight: FontWeight.w500);
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: InkWell(
+        onTap: widget.onOpen,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          height: rowHeight,
+          padding: EdgeInsets.symmetric(horizontal: widget.compact ? 14 : 20),
+          color: _hover ? const Color(0xFFF8FAFF) : Colors.white,
+          child: Row(
+            children: [
+              Expanded(
+                flex: 4,
+                child: Row(
+                  children: [
+                    Container(
+                      width: widget.compact ? 34 : 40,
+                      height: widget.compact ? 34 : 40,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: record.color.withValues(alpha: .12),
+                        borderRadius: BorderRadius.circular(9),
+                      ),
+                      child: SvgPicture.asset('assets/ppdesk_device.svg',
+                          width: widget.compact ? 18 : 22,
+                          height: widget.compact ? 18 : 22,
+                          colorFilter:
+                              ColorFilter.mode(record.color, BlendMode.srcIn)),
+                    ),
+                    SizedBox(width: widget.compact ? 8 : 12),
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(_peerName(record.peer),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                  fontSize: widget.compact ? 13 : 14,
+                                  color: const Color(0xFF101828),
+                                  fontWeight: FontWeight.w800)),
+                          const SizedBox(height: 3),
+                          Text(formatID(record.peer.id),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: mutedStyle),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(
+                width: widget.compact ? 94 : 118,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: _SessionTypeChip(
+                    type: record.type,
+                    compact: widget.compact,
+                  ),
+                ),
+              ),
+              Expanded(
+                flex: 3,
+                child: record.isFile
+                    ? Row(
+                        children: [
+                          SvgPicture.asset('assets/ppdesk_file.svg',
+                              width: widget.compact ? 16 : 18,
+                              height: widget.compact ? 16 : 18,
+                              colorFilter: const ColorFilter.mode(
+                                  Color(0xFF66738A), BlendMode.srcIn)),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(record.fileName,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                        fontSize: widget.compact ? 12 : 13,
+                                        color: const Color(0xFF344054),
+                                        fontWeight: FontWeight.w700)),
+                                const SizedBox(height: 3),
+                                Text(record.fileSize,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: mutedStyle),
+                              ],
+                            ),
+                          ),
+                        ],
+                      )
+                    : const SizedBox.shrink(),
+              ),
+              SizedBox(
+                  width: widget.compact ? 72 : 88,
+                  child: Text(record.time, style: mutedStyle)),
+              SizedBox(
+                  width: widget.compact ? 78 : 96,
+                  child: Text(record.duration, style: mutedStyle)),
+              SizedBox(
+                width: widget.compact ? 72 : 90,
+                child: Row(
+                  children: [
+                    Container(
+                      width: 7,
+                      height: 7,
+                      decoration: BoxDecoration(
+                          color: status.$2, shape: BoxShape.circle),
+                    ),
+                    const SizedBox(width: 7),
+                    Flexible(
+                      child: Text(status.$1,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              fontSize: widget.compact ? 12 : 13,
+                              color: status.$2,
+                              fontWeight: FontWeight.w700)),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(
+                width: widget.compact ? 34 : 44,
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: PopupMenuButton<String>(
+                    tooltip: translate('More'),
+                    offset: const Offset(0, 8),
+                    onSelected: widget.onAction,
+                    itemBuilder: (context) => [
+                      PopupMenuItem(
+                          value: 'connect', child: Text(translate('Connect'))),
+                      PopupMenuItem(
+                          value: 'file',
+                          child: Text(translate('Transfer file'))),
+                      const PopupMenuItem(value: 'detail', child: Text('详情')),
+                    ],
+                    child: SvgPicture.asset('assets/ppdesk_more.svg',
+                        width: 18,
+                        height: 18,
+                        colorFilter: const ColorFilter.mode(
+                            Color(0xFF66738A), BlendMode.srcIn)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  (String, Color) _status(String status) {
+    return switch (status) {
+      'failed' => ('失败', const Color(0xFFFF314A)),
+      'interrupted' => ('中断', const Color(0xFFFF9500)),
+      _ => ('成功', const Color(0xFF20C66B)),
+    };
+  }
+
+  String _peerName(Peer peer) {
+    if (peer.alias.isNotEmpty) {
+      return peer.alias;
+    }
+    if (peer.username.isNotEmpty && peer.hostname.isNotEmpty) {
+      return '${peer.username}@${peer.hostname}';
+    }
+    if (peer.hostname.isNotEmpty) {
+      return peer.hostname;
+    }
+    if (peer.username.isNotEmpty) {
+      return peer.username;
+    }
+    return formatID(peer.id);
+  }
+}
+
+class _SessionTypeChip extends StatelessWidget {
+  const _SessionTypeChip({required this.type, required this.compact});
+
+  final String type;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final isFile = type == 'file';
+    final color = isFile ? const Color(0xFF20C66B) : const Color(0xFF2D6BFF);
+    return Container(
+      padding: EdgeInsets.symmetric(
+          horizontal: compact ? 7 : 9, vertical: compact ? 4 : 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: .12),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(isFile ? '文件传输' : '远程控制',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+              fontSize: compact ? 11 : 12,
+              color: color,
+              fontWeight: FontWeight.w800)),
+    );
   }
 }
 
