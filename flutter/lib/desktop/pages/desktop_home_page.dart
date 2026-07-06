@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hbb/common/formatter/id_formatter.dart';
 import 'package:flutter_hbb/common/widgets/autocomplete.dart';
-import 'package:flutter_hbb/common/widgets/peer_tab_page.dart';
 import 'package:flutter_hbb/common.dart';
 import 'package:flutter_hbb/common/widgets/animated_rotation_widget.dart';
 import 'package:flutter_hbb/common/widgets/custom_password.dart';
@@ -97,7 +96,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       child: LayoutBuilder(
         builder: (context, constraints) {
           final compact =
-              constraints.maxWidth < 1120 || constraints.maxHeight < 760;
+              constraints.maxWidth < 1180 || constraints.maxHeight < 980;
           final sidebarWidth = compact ? 260.0 : 296.0;
           return Container(
             color: const Color(0xFFF8FAFF),
@@ -374,11 +373,11 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     return LayoutBuilder(
       builder: (context, constraints) {
         final compact =
-            constraints.maxWidth < 780 || constraints.maxHeight < 760;
-        final horizontalPadding = compact ? 32.0 : 56.0;
-        final rightPadding = compact ? 30.0 : 48.0;
-        final topPadding = compact ? 22.0 : 28.0;
-        final blockGap = compact ? 16.0 : 24.0;
+            constraints.maxWidth < 1120 || constraints.maxHeight < 980;
+        final horizontalPadding = compact ? 28.0 : 48.0;
+        final rightPadding = compact ? 28.0 : 44.0;
+        final topPadding = compact ? 18.0 : 24.0;
+        final blockGap = compact ? 12.0 : 20.0;
         return Padding(
           padding: EdgeInsets.fromLTRB(
               horizontalPadding, topPadding, rightPadding, compact ? 20 : 28),
@@ -396,16 +395,17 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                                fontSize: compact ? 28 : 32,
+                                fontSize: compact ? 26 : 32,
                                 height: 1.1,
                                 fontWeight: FontWeight.w900,
                                 color: const Color(0xFF101828))),
-                        SizedBox(height: compact ? 8 : 10),
-                        const Text('安全、高效、简单，随时随地轻松远程连接。',
+                        SizedBox(height: compact ? 5 : 10),
+                        Text('安全、高效、简单，随时随地轻松远程连接。',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                                fontSize: 15, color: Color(0xFF66738A))),
+                                fontSize: compact ? 13 : 15,
+                                color: const Color(0xFF66738A))),
                       ],
                     ),
                   ),
@@ -474,26 +474,27 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   Widget _buildPPDeskQuickConnect(BuildContext context,
       {required bool compact}) {
     return Container(
-      padding: EdgeInsets.fromLTRB(compact ? 22 : 28, compact ? 18 : 26,
-          compact ? 22 : 28, compact ? 18 : 26),
+      padding: EdgeInsets.fromLTRB(compact ? 18 : 26, compact ? 14 : 24,
+          compact ? 18 : 26, compact ? 14 : 24),
       decoration: _ppDeskCardDecoration(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('快速连接',
               style: TextStyle(
-                  fontSize: compact ? 20 : 22,
+                  fontSize: compact ? 18 : 22,
                   fontWeight: FontWeight.w900,
                   color: const Color(0xFF101828))),
-          SizedBox(height: compact ? 4 : 6),
-          const Text('输入设备 ID，发起远程连接',
-              style: TextStyle(fontSize: 13, color: Color(0xFF7C8AA5))),
-          SizedBox(height: compact ? 14 : 20),
+          SizedBox(height: compact ? 3 : 6),
+          Text('输入设备 ID，发起远程连接',
+              style: TextStyle(
+                  fontSize: compact ? 12 : 13, color: const Color(0xFF7C8AA5))),
+          SizedBox(height: compact ? 10 : 18),
           Row(
             children: [
               Expanded(
                   child: _buildPPDeskRemoteIdField(context, compact: compact)),
-              SizedBox(width: compact ? 16 : 28),
+              SizedBox(width: compact ? 14 : 26),
               _PPDeskPrimaryButton(
                 label: translate('Connect'),
                 compact: compact,
@@ -501,7 +502,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               ),
             ],
           ),
-          SizedBox(height: compact ? 12 : 20),
+          SizedBox(height: compact ? 10 : 18),
           Row(
             children: [
               Expanded(
@@ -535,7 +536,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     return Obx(() {
       final focused = _ppDeskIdFocused.value;
       return Container(
-        height: compact ? 52 : 58,
+        height: compact ? 46 : 56,
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
@@ -549,7 +550,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
             Padding(
               padding: const EdgeInsets.only(left: 20, right: 4),
               child: _ppDeskSvg('ppdesk_device',
-                  color: const Color(0xFF66738A), size: compact ? 20 : 22),
+                  color: const Color(0xFF66738A), size: compact ? 18 : 22),
             ),
             Expanded(
               child: RawAutocomplete<Peer>(
@@ -605,18 +606,18 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                     focusNode: focusNode,
                     controller: controller,
                     inputFormatters: [IDTextInputFormatter()],
-                    style: const TextStyle(
-                        fontSize: 18,
+                    style: TextStyle(
+                        fontSize: compact ? 16 : 18,
                         height: 1.35,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF101828)),
+                        color: const Color(0xFF101828)),
                     decoration: InputDecoration(
                       border: InputBorder.none,
                       hintText: '请输入设备 ID',
                       hintStyle: const TextStyle(
                           color: Color(0xFFA1AEC2), fontSize: 16),
                       contentPadding: EdgeInsets.symmetric(
-                          horizontal: 12, vertical: compact ? 14 : 17),
+                          horizontal: 12, vertical: compact ? 11 : 16),
                     ),
                     onChanged: (v) => _ppDeskIdController.id = v,
                     onSubmitted: (_) => _ppDeskConnect(),
@@ -683,7 +684,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               ],
               child: Container(
                 width: 56,
-                height: compact ? 52 : 58,
+                height: compact ? 46 : 56,
                 alignment: Alignment.center,
                 decoration: const BoxDecoration(
                   border: Border(left: BorderSide(color: Color(0xFFE4EAF4))),
@@ -765,39 +766,94 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   }
 
   Widget _buildPPDeskRecentCard({required bool compact}) {
-    return Container(
-      padding: EdgeInsets.fromLTRB(
-          compact ? 18 : 24, compact ? 16 : 22, compact ? 18 : 24, 10),
-      decoration: _ppDeskCardDecoration(),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    return AnimatedBuilder(
+      animation: gFFI.recentPeersModel,
+      builder: (context, _) {
+        final peers = gFFI.recentPeersModel.peers.take(8).toList();
+        return Container(
+          padding: EdgeInsets.fromLTRB(
+              compact ? 16 : 22, compact ? 14 : 20, compact ? 16 : 22, 8),
+          decoration: _ppDeskCardDecoration(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('最近连接',
-                  style: TextStyle(
-                      fontSize: compact ? 18 : 20,
-                      fontWeight: FontWeight.w900,
-                      color: const Color(0xFF101828))),
-              const Spacer(),
-              InkWell(
-                onTap: () => gFFI.peerTabModel.setCurrentTab(0),
-                borderRadius: BorderRadius.circular(8),
-                child: Row(
-                  children: [
-                    const Text('查看全部',
-                        style: TextStyle(
-                            color: Color(0xFF2D6BFF),
-                            fontWeight: FontWeight.w700)),
-                    _ppDeskSvg('ppdesk_chevron_right',
-                        color: const Color(0xFF2D6BFF), size: 18),
-                  ],
-                ).paddingSymmetric(horizontal: 8, vertical: 6),
+              Row(
+                children: [
+                  Text('最近连接',
+                      style: TextStyle(
+                          fontSize: compact ? 17 : 20,
+                          fontWeight: FontWeight.w900,
+                          color: const Color(0xFF101828))),
+                  const Spacer(),
+                  InkWell(
+                    onTap: () => gFFI.peerTabModel.setCurrentTab(0),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Row(
+                      children: [
+                        const Text('查看全部',
+                            style: TextStyle(
+                                color: Color(0xFF2D6BFF),
+                                fontWeight: FontWeight.w700)),
+                        _ppDeskSvg('ppdesk_chevron_right',
+                            color: const Color(0xFF2D6BFF), size: 18),
+                      ],
+                    ).paddingSymmetric(horizontal: 8, vertical: 6),
+                  ),
+                ],
+              ),
+              SizedBox(height: compact ? 8 : 14),
+              _buildPPDeskRecentHeader(compact: compact),
+              const SizedBox(height: 4),
+              Expanded(
+                child: peers.isEmpty
+                    ? Center(
+                        child: Text('暂无最近连接',
+                            style: TextStyle(
+                                fontSize: compact ? 13 : 14,
+                                color: const Color(0xFF7C8AA5))),
+                      )
+                    : ListView.separated(
+                        padding: EdgeInsets.zero,
+                        itemCount: peers.length,
+                        separatorBuilder: (_, __) =>
+                            const Divider(height: 1, color: Color(0xFFE8EEF8)),
+                        itemBuilder: (_, index) => _PPDeskRecentRow(
+                          peer: peers[index],
+                          compact: compact,
+                          onConnect: () {
+                            _ppDeskIdController.id = peers[index].id;
+                            _ppDeskConnect();
+                          },
+                        ),
+                      ),
               ),
             ],
           ),
-          SizedBox(height: compact ? 8 : 12),
-          const Expanded(child: PeerTabPage()),
+        );
+      },
+    );
+  }
+
+  Widget _buildPPDeskRecentHeader({required bool compact}) {
+    final style = TextStyle(
+        fontSize: compact ? 12 : 13,
+        color: const Color(0xFF7C8AA5),
+        fontWeight: FontWeight.w700);
+    return Container(
+      height: compact ? 34 : 40,
+      padding: EdgeInsets.symmetric(horizontal: compact ? 12 : 16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFF),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          SizedBox(width: compact ? 42 : 48),
+          Expanded(flex: 4, child: Text('设备名称', style: style)),
+          Expanded(flex: 3, child: Text('设备 ID', style: style)),
+          Expanded(flex: 2, child: Text('平台', style: style)),
+          Expanded(flex: 2, child: Text('状态', style: style)),
+          SizedBox(width: compact ? 46 : 58, child: Text('操作', style: style)),
         ],
       ),
     );
@@ -1863,8 +1919,8 @@ class _PPDeskPrimaryButtonState extends State<_PPDeskPrimaryButton> {
         borderRadius: BorderRadius.circular(12),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 140),
-          width: widget.compact ? 180 : 216,
-          height: widget.compact ? 52 : 58,
+          width: widget.compact ? 156 : 206,
+          height: widget.compact ? 46 : 56,
           alignment: Alignment.center,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
@@ -1883,7 +1939,7 @@ class _PPDeskPrimaryButtonState extends State<_PPDeskPrimaryButton> {
           child: Text(widget.label,
               style: TextStyle(
                   color: Colors.white,
-                  fontSize: widget.compact ? 17 : 18,
+                  fontSize: widget.compact ? 16 : 18,
                   fontWeight: FontWeight.w800)),
         ),
       ),
@@ -1923,8 +1979,8 @@ class _PPDeskActionTileState extends State<_PPDeskActionTile> {
         borderRadius: BorderRadius.circular(12),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 140),
-          height: widget.compact ? 54 : 66,
-          padding: EdgeInsets.symmetric(horizontal: widget.compact ? 16 : 22),
+          height: widget.compact ? 44 : 62,
+          padding: EdgeInsets.symmetric(horizontal: widget.compact ? 14 : 20),
           decoration: BoxDecoration(
             color: _hover ? const Color(0xFFF7FAFF) : Colors.white,
             borderRadius: BorderRadius.circular(12),
@@ -1936,29 +1992,30 @@ class _PPDeskActionTileState extends State<_PPDeskActionTile> {
             children: [
               SvgPicture.asset(
                 'assets/${widget.icon}.svg',
-                width: widget.compact ? 24 : 28,
-                height: widget.compact ? 24 : 28,
+                width: widget.compact ? 20 : 28,
+                height: widget.compact ? 20 : 28,
                 colorFilter:
                     const ColorFilter.mode(Color(0xFF2D6BFF), BlendMode.srcIn),
               ),
-              SizedBox(width: widget.compact ? 12 : 18),
+              SizedBox(width: widget.compact ? 10 : 16),
               Expanded(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(widget.title,
-                        style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFF101828))),
-                    SizedBox(height: widget.compact ? 2 : 4),
-                    Text(widget.subtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                            fontSize: widget.compact ? 12 : 13,
-                            color: const Color(0xFF7C8AA5))),
+                            fontSize: widget.compact ? 14 : 16,
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFF101828))),
+                    if (!widget.compact) ...[
+                      const SizedBox(height: 4),
+                      Text(widget.subtitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 13, color: Color(0xFF7C8AA5))),
+                    ],
                   ],
                 ),
               ),
@@ -2008,8 +2065,8 @@ class _PPDeskStatCardState extends State<_PPDeskStatCard> {
       onExit: (_) => setState(() => _hover = false),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 140),
-        height: widget.compact ? 112 : 152,
-        padding: EdgeInsets.all(widget.compact ? 14 : 24),
+        height: widget.compact ? 84 : 136,
+        padding: EdgeInsets.all(widget.compact ? 12 : 22),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(18),
@@ -2029,8 +2086,8 @@ class _PPDeskStatCardState extends State<_PPDeskStatCard> {
         child: Row(
           children: [
             Container(
-              height: widget.compact ? 40 : 50,
-              width: widget.compact ? 40 : 50,
+              height: widget.compact ? 36 : 50,
+              width: widget.compact ? 36 : 50,
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: widget.color.withValues(alpha: .12),
@@ -2038,12 +2095,12 @@ class _PPDeskStatCardState extends State<_PPDeskStatCard> {
               ),
               child: SvgPicture.asset(
                 'assets/${widget.icon}.svg',
-                width: widget.compact ? 22 : 28,
-                height: widget.compact ? 22 : 28,
+                width: widget.compact ? 20 : 28,
+                height: widget.compact ? 20 : 28,
                 colorFilter: ColorFilter.mode(widget.color, BlendMode.srcIn),
               ),
             ),
-            SizedBox(width: widget.compact ? 10 : 18),
+            SizedBox(width: widget.compact ? 9 : 16),
             Expanded(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -2052,35 +2109,36 @@ class _PPDeskStatCardState extends State<_PPDeskStatCard> {
                   Text(widget.title,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                          fontSize: widget.compact ? 12 : 15,
+                          fontSize: widget.compact ? 11 : 15,
                           fontWeight: FontWeight.w800,
                           color: const Color(0xFF101828))),
-                  SizedBox(height: widget.compact ? 5 : 8),
+                  SizedBox(height: widget.compact ? 3 : 8),
                   Text(widget.value,
                       style: TextStyle(
-                          fontSize: widget.compact ? 22 : 28,
+                          fontSize: widget.compact ? 20 : 28,
                           height: 1,
                           fontWeight: FontWeight.w900,
                           color: const Color(0xFF101828))),
-                  SizedBox(height: widget.compact ? 10 : 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(widget.subtitle,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                                fontSize: widget.compact ? 11 : 13,
-                                color: const Color(0xFF7C8AA5))),
-                      ),
-                      SvgPicture.asset(
-                        'assets/ppdesk_chevron_right.svg',
-                        width: 18,
-                        height: 18,
-                        colorFilter: const ColorFilter.mode(
-                            Color(0xFF7C8AA5), BlendMode.srcIn),
-                      ),
-                    ],
-                  ),
+                  if (!widget.compact) ...[
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(widget.subtitle,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  fontSize: 13, color: Color(0xFF7C8AA5))),
+                        ),
+                        SvgPicture.asset(
+                          'assets/ppdesk_chevron_right.svg',
+                          width: 18,
+                          height: 18,
+                          colorFilter: const ColorFilter.mode(
+                              Color(0xFF7C8AA5), BlendMode.srcIn),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -2088,6 +2146,150 @@ class _PPDeskStatCardState extends State<_PPDeskStatCard> {
         ),
       ),
     );
+  }
+}
+
+class _PPDeskRecentRow extends StatefulWidget {
+  const _PPDeskRecentRow({
+    required this.peer,
+    required this.compact,
+    required this.onConnect,
+  });
+
+  final Peer peer;
+  final bool compact;
+  final VoidCallback onConnect;
+
+  @override
+  State<_PPDeskRecentRow> createState() => _PPDeskRecentRowState();
+}
+
+class _PPDeskRecentRowState extends State<_PPDeskRecentRow> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final name = _peerName(widget.peer);
+    final online = widget.peer.online;
+    final statusColor =
+        online ? const Color(0xFF20C66B) : const Color(0xFF8A98AD);
+    final height = widget.compact ? 56.0 : 66.0;
+    final textStyle = TextStyle(
+        fontSize: widget.compact ? 13 : 14,
+        color: const Color(0xFF101828),
+        fontWeight: FontWeight.w700);
+    final mutedStyle = TextStyle(
+        fontSize: widget.compact ? 12 : 13,
+        color: const Color(0xFF6F7D95),
+        fontWeight: FontWeight.w500);
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: InkWell(
+        onTap: widget.onConnect,
+        borderRadius: BorderRadius.circular(10),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          height: height,
+          padding: EdgeInsets.symmetric(horizontal: widget.compact ? 12 : 16),
+          decoration: BoxDecoration(
+            color: _hover ? const Color(0xFFF8FAFF) : Colors.white,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: widget.compact ? 34 : 40,
+                height: widget.compact ? 34 : 40,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEAF0FF),
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: SvgPicture.asset(
+                  'assets/ppdesk_device.svg',
+                  width: widget.compact ? 18 : 22,
+                  height: widget.compact ? 18 : 22,
+                  colorFilter: const ColorFilter.mode(
+                      Color(0xFF2D6BFF), BlendMode.srcIn),
+                ),
+              ),
+              SizedBox(width: widget.compact ? 8 : 10),
+              Expanded(
+                  flex: 4,
+                  child: Text(name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: textStyle)),
+              Expanded(
+                  flex: 3,
+                  child: Text(formatID(widget.peer.id),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: mutedStyle)),
+              Expanded(
+                  flex: 2,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: getPlatformImage(widget.peer.platform,
+                        size: widget.compact ? 18 : 20),
+                  )),
+              Expanded(
+                  flex: 2,
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                            color: statusColor, shape: BoxShape.circle),
+                      ),
+                      const SizedBox(width: 7),
+                      Text(online ? '在线' : '离线',
+                          overflow: TextOverflow.ellipsis, style: mutedStyle),
+                    ],
+                  )),
+              SizedBox(
+                width: widget.compact ? 46 : 58,
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: Tooltip(
+                    message: translate('Connect'),
+                    child: SvgPicture.asset(
+                      'assets/ppdesk_chevron_right.svg',
+                      width: 18,
+                      height: 18,
+                      colorFilter: ColorFilter.mode(
+                          _hover
+                              ? const Color(0xFF2D6BFF)
+                              : const Color(0xFF7C8AA5),
+                          BlendMode.srcIn),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _peerName(Peer peer) {
+    if (peer.alias.isNotEmpty) {
+      return peer.alias;
+    }
+    if (peer.username.isNotEmpty && peer.hostname.isNotEmpty) {
+      return '${peer.username}@${peer.hostname}';
+    }
+    if (peer.hostname.isNotEmpty) {
+      return peer.hostname;
+    }
+    if (peer.username.isNotEmpty) {
+      return peer.username;
+    }
+    return formatID(peer.id);
   }
 }
 
