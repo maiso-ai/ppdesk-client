@@ -63,6 +63,7 @@ enum SettingsTabKey {
 
 class DesktopSettingPage extends StatefulWidget {
   final SettingsTabKey initialTabkey;
+  final bool embedded;
   static final List<SettingsTabKey> tabKeys = [
     SettingsTabKey.general,
     if (!isWeb &&
@@ -83,7 +84,11 @@ class DesktopSettingPage extends StatefulWidget {
     SettingsTabKey.about,
   ];
 
-  DesktopSettingPage({Key? key, required this.initialTabkey}) : super(key: key);
+  DesktopSettingPage({
+    Key? key,
+    required this.initialTabkey,
+    this.embedded = false,
+  }) : super(key: key);
 
   @override
   State<DesktopSettingPage> createState() =>
@@ -171,7 +176,7 @@ class _DesktopSettingPageState extends State<DesktopSettingPage>
   void dispose() {
     super.dispose();
     Get.delete<PageController>(tag: _kSettingPageControllerTag);
-    Get.delete<RxInt>(tag: _kSettingPageTabKeyTag);
+    Get.delete<Rx<SettingsTabKey>>(tag: _kSettingPageTabKeyTag);
     WidgetsBinding.instance.removeObserver(this);
     _videoConnTimer?.cancel();
   }
@@ -276,6 +281,22 @@ class _DesktopSettingPageState extends State<DesktopSettingPage>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    if (widget.embedded) {
+      return _buildBlock(
+        children: <Widget>[
+          Expanded(
+            child: Container(
+              color: Colors.transparent,
+              child: PageView(
+                controller: controller,
+                physics: const NeverScrollableScrollPhysics(),
+                children: _children(),
+              ),
+            ),
+          )
+        ],
+      );
+    }
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
       body: _buildBlock(

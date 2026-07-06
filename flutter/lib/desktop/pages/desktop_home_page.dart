@@ -77,6 +77,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   String _ppDeskSessionSearch = '';
   String _ppDeskSessionType = 'all';
   String _ppDeskSessionTime = 'all';
+  SettingsTabKey _ppDeskSettingTab = SettingsTabKey.account;
 
   @override
   Widget build(BuildContext context) {
@@ -199,8 +200,9 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               _PPDeskNavItem(
                 icon: 'ppdesk_settings',
                 label: '设置中心',
+                selected: _ppDeskPage == 3,
                 compact: compact,
-                onTap: DesktopTabPage.onAddSetting,
+                onTap: () => setState(() => _ppDeskPage = 3),
               ),
               const Spacer(),
               if (!isOutgoingOnly)
@@ -275,8 +277,10 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                   _PPDeskIconButton(
                     icon: 'ppdesk_edit',
                     tooltip: translate('Change Password'),
-                    onTap: () =>
-                        DesktopSettingPage.switch2page(SettingsTabKey.safety),
+                    onTap: () => setState(() {
+                      _ppDeskPage = 3;
+                      _ppDeskSettingTab = SettingsTabKey.safety;
+                    }),
                   ),
               ],
             ),
@@ -404,6 +408,12 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           return Padding(
             padding: padding,
             child: _buildPPDeskSessionPage(compact: compact),
+          );
+        }
+        if (_ppDeskPage == 3) {
+          return Padding(
+            padding: padding,
+            child: _buildPPDeskSettingsPage(compact: compact),
           );
         }
         return Padding(
@@ -1304,6 +1314,204 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         '全部时间';
   }
 
+  Widget _buildPPDeskSettingsPage({required bool compact}) {
+    final tabs = DesktopSettingPage.tabKeys;
+    final selected =
+        tabs.contains(_ppDeskSettingTab) ? _ppDeskSettingTab : tabs.first;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('设置中心',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          fontSize: compact ? 28 : 34,
+                          height: 1.1,
+                          fontWeight: FontWeight.w900,
+                          color: const Color(0xFF101828))),
+                  SizedBox(height: compact ? 6 : 10),
+                  Text('管理账号、安全、通知与远程控制相关设置。',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          fontSize: compact ? 13 : 15,
+                          color: const Color(0xFF66738A))),
+                ],
+              ),
+            ),
+            const SizedBox(width: 18),
+            _buildPPDeskTopBar(),
+          ],
+        ),
+        SizedBox(height: compact ? 16 : 24),
+        Expanded(
+          child: Row(
+            children: [
+              _buildPPDeskSettingsNav(tabs, selected, compact: compact),
+              SizedBox(width: compact ? 12 : 18),
+              Expanded(
+                child: Container(
+                  decoration: _ppDeskCardDecoration(),
+                  clipBehavior: Clip.antiAlias,
+                  child: Column(
+                    children: [
+                      _buildPPDeskSettingsProfileCard(compact: compact),
+                      const Divider(height: 1, color: Color(0xFFE8EEF8)),
+                      Expanded(
+                        child: KeyedSubtree(
+                          key: ValueKey(selected),
+                          child: DesktopSettingPage(
+                            initialTabkey: selected,
+                            embedded: true,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPPDeskSettingsNav(
+      List<SettingsTabKey> tabs, SettingsTabKey selected,
+      {required bool compact}) {
+    return Container(
+      width: compact ? 168 : 220,
+      padding: EdgeInsets.all(compact ? 12 : 16),
+      decoration: _ppDeskCardDecoration(),
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          for (final tab in tabs)
+            _PPDeskSettingsTabItem(
+              icon: _ppDeskSettingIcon(tab),
+              label: _ppDeskSettingLabel(tab),
+              selected: selected == tab,
+              compact: compact,
+              onTap: () => setState(() => _ppDeskSettingTab = tab),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPPDeskSettingsProfileCard({required bool compact}) {
+    return Container(
+      padding: EdgeInsets.all(compact ? 14 : 18),
+      color: Colors.white,
+      child: Row(
+        children: [
+          Container(
+            width: compact ? 48 : 62,
+            height: compact ? 48 : 62,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: const LinearGradient(
+                  colors: [Color(0xFFEAF0FF), Color(0xFFDDE8FF)]),
+              border: Border.all(color: const Color(0xFFE1E8F4)),
+            ),
+            child: Text('皮',
+                style: TextStyle(
+                    fontSize: compact ? 22 : 28,
+                    color: const Color(0xFF2D6BFF),
+                    fontWeight: FontWeight.w900)),
+          ),
+          SizedBox(width: compact ? 12 : 18),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text('皮皮用户',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: compact ? 17 : 20,
+                            fontWeight: FontWeight.w900,
+                            color: const Color(0xFF101828))),
+                    const SizedBox(width: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE6F8EE),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text('已认证',
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF18A957),
+                              fontWeight: FontWeight.w800)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                const Text('user@example.com',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 13, color: Color(0xFF66738A))),
+              ],
+            ),
+          ),
+          _PPDeskOutlineButton(
+            icon: 'ppdesk_user',
+            label: '修改头像',
+            compact: compact,
+            onTap: () =>
+                setState(() => _ppDeskSettingTab = SettingsTabKey.account),
+          ),
+          const SizedBox(width: 10),
+          _PPDeskOutlineButton(
+            icon: 'ppdesk_lock',
+            label: '修改密码',
+            compact: compact,
+            onTap: () => setPasswordDialog(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _ppDeskSettingLabel(SettingsTabKey tab) {
+    return switch (tab) {
+      SettingsTabKey.account => '账号信息',
+      SettingsTabKey.general => '常规设置',
+      SettingsTabKey.safety => '安全设置',
+      SettingsTabKey.network => '网络设置',
+      SettingsTabKey.display => '显示设置',
+      SettingsTabKey.plugin => '插件设置',
+      SettingsTabKey.printer => '打印设置',
+      SettingsTabKey.about => '关于我们',
+    };
+  }
+
+  String _ppDeskSettingIcon(SettingsTabKey tab) {
+    return switch (tab) {
+      SettingsTabKey.account => 'ppdesk_user',
+      SettingsTabKey.general => 'ppdesk_settings',
+      SettingsTabKey.safety => 'ppdesk_shield',
+      SettingsTabKey.network => 'ppdesk_toolbox',
+      SettingsTabKey.display => 'ppdesk_device',
+      SettingsTabKey.plugin => 'ppdesk_folder',
+      SettingsTabKey.printer => 'ppdesk_file',
+      SettingsTabKey.about => 'ppdesk_info',
+    };
+  }
+
   Widget _buildPPDeskQuickConnect(BuildContext context,
       {required bool compact}) {
     return Container(
@@ -1753,7 +1961,10 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         return;
       }
     }
-    DesktopSettingPage.switch2page(SettingsTabKey.safety);
+    setState(() {
+      _ppDeskPage = 3;
+      _ppDeskSettingTab = SettingsTabKey.safety;
+    });
   }
 
   void _onPPDeskIdFocusChanged() {
@@ -3030,6 +3241,72 @@ class _PPDeskPagerButtonState extends State<_PPDeskPagerButton> {
                 colorFilter: ColorFilter.mode(
                     _hover ? const Color(0xFF2D6BFF) : const Color(0xFF66738A),
                     BlendMode.srcIn)),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PPDeskSettingsTabItem extends StatefulWidget {
+  const _PPDeskSettingsTabItem({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.compact,
+    required this.onTap,
+  });
+
+  final String icon;
+  final String label;
+  final bool selected;
+  final bool compact;
+  final VoidCallback onTap;
+
+  @override
+  State<_PPDeskSettingsTabItem> createState() => _PPDeskSettingsTabItemState();
+}
+
+class _PPDeskSettingsTabItemState extends State<_PPDeskSettingsTabItem> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final active = widget.selected || _hover;
+    final color = active ? const Color(0xFF2D6BFF) : const Color(0xFF344054);
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: InkWell(
+        onTap: widget.onTap,
+        borderRadius: BorderRadius.circular(9),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          height: widget.compact ? 40 : 46,
+          margin: const EdgeInsets.only(bottom: 6),
+          padding: EdgeInsets.symmetric(horizontal: widget.compact ? 10 : 12),
+          decoration: BoxDecoration(
+            color: active ? const Color(0xFFEAF0FF) : Colors.transparent,
+            borderRadius: BorderRadius.circular(9),
+          ),
+          child: Row(
+            children: [
+              SvgPicture.asset('assets/${widget.icon}.svg',
+                  width: 18,
+                  height: 18,
+                  colorFilter: ColorFilter.mode(color, BlendMode.srcIn)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(widget.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        fontSize: widget.compact ? 13 : 14,
+                        color: color,
+                        fontWeight:
+                            active ? FontWeight.w800 : FontWeight.w600)),
+              ),
+            ],
           ),
         ),
       ),
