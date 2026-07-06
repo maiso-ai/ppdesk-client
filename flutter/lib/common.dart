@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math';
 
 import 'package:back_button_interceptor/back_button_interceptor.dart';
 import 'package:desktop_multi_window/desktop_multi_window.dart';
@@ -1902,12 +1901,14 @@ Future<Size> _adjustRestoreMainWindowSize(double? width, double? height) async {
   const double maxWidth = 6480;
   const double maxHeight = 6480;
 
-  final defaultWidth =
-      ((isDesktop || isWebDesktop) ? 1280 : kMobileDefaultDisplayWidth)
-          .toDouble();
-  final defaultHeight =
-      ((isDesktop || isWebDesktop) ? 720 : kMobileDefaultDisplayHeight)
-          .toDouble();
+  final defaultWidth = ((isDesktop || isWebDesktop)
+          ? kMainWindowDefaultSize.width
+          : kMobileDefaultDisplayWidth)
+      .toDouble();
+  final defaultHeight = ((isDesktop || isWebDesktop)
+          ? kMainWindowDefaultSize.height
+          : kMobileDefaultDisplayHeight)
+      .toDouble();
   double restoreWidth = width ?? defaultWidth;
   double restoreHeight = height ?? defaultHeight;
 
