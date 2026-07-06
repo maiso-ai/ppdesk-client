@@ -194,8 +194,9 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               _PPDeskNavItem(
                 icon: 'ppdesk_toolbox',
                 label: '工具箱',
+                selected: _ppDeskPage == 4,
                 compact: compact,
-                onTap: () => showToast('工具箱暂未开放'),
+                onTap: () => setState(() => _ppDeskPage = 4),
               ),
               _PPDeskNavItem(
                 icon: 'ppdesk_settings',
@@ -414,6 +415,12 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           return Padding(
             padding: padding,
             child: _buildPPDeskSettingsPage(compact: compact),
+          );
+        }
+        if (_ppDeskPage == 4) {
+          return Padding(
+            padding: padding,
+            child: _buildPPDeskToolboxPage(compact: compact),
           );
         }
         return Padding(
@@ -1510,6 +1517,349 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       SettingsTabKey.printer => 'ppdesk_file',
       SettingsTabKey.about => 'ppdesk_info',
     };
+  }
+
+  Widget _buildPPDeskToolboxPage({required bool compact}) {
+    final tools = [
+      _PPDeskToolSpec(
+          icon: 'ppdesk_folder',
+          title: '文件传输',
+          subtitle: '快速收发文件到远程设备',
+          color: const Color(0xFF2D6BFF),
+          onTap: () => _ppDeskConnect(isFileTransfer: true)),
+      _PPDeskToolSpec(
+          icon: 'ppdesk_clipboard',
+          title: '剪贴板同步',
+          subtitle: '同步文本与图片内容',
+          color: const Color(0xFF7C3CFF),
+          onTap: () => setState(() {
+                _ppDeskPage = 3;
+                _ppDeskSettingTab = SettingsTabKey.safety;
+              })),
+      _PPDeskToolSpec(
+          icon: 'ppdesk_crop',
+          title: '屏幕截图',
+          subtitle: '截取远程屏幕并保存',
+          color: const Color(0xFF20C66B),
+          onTap: () => showToast('请在远程会话工具栏中使用屏幕截图')),
+      _PPDeskToolSpec(
+          icon: 'ppdesk_terminal',
+          title: 'CMD/终端',
+          subtitle: '远程执行命令行操作',
+          color: const Color(0xFFFF9500),
+          onTap: () => _ppDeskConnect(isTerminal: true)),
+      _PPDeskToolSpec(
+          icon: 'ppdesk_restart',
+          title: '远程重启',
+          subtitle: '快速重启目标设备',
+          color: const Color(0xFF2D6BFF),
+          onTap: () => showToast('连接后可在会话工具栏重启远程设备')),
+      _PPDeskToolSpec(
+          icon: 'ppdesk_lock',
+          title: '锁定设备',
+          subtitle: '一键锁屏保护远程设备',
+          color: const Color(0xFF7C3CFF),
+          onTap: () => showToast('连接后可在会话工具栏锁定远程设备')),
+      _PPDeskToolSpec(
+          icon: 'ppdesk_file',
+          title: '日志导出',
+          subtitle: '导出连接与操作记录',
+          color: const Color(0xFF20C66B),
+          onTap: () => setState(() => _ppDeskPage = 2)),
+      _PPDeskToolSpec(
+          icon: 'ppdesk_stack',
+          title: '批量操作',
+          subtitle: '多设备统一执行任务',
+          color: const Color(0xFFFF9500),
+          onTap: () => setState(() => _ppDeskPage = 1)),
+    ];
+    final recent = [tools[0], tools[1], tools[3], tools[2]];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('工具箱',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          fontSize: compact ? 28 : 34,
+                          height: 1.1,
+                          fontWeight: FontWeight.w900,
+                          color: const Color(0xFF101828))),
+                  SizedBox(height: compact ? 6 : 10),
+                  Text('常用远程辅助工具与快捷操作入口。',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          fontSize: compact ? 13 : 15,
+                          color: const Color(0xFF66738A))),
+                ],
+              ),
+            ),
+            const SizedBox(width: 18),
+            _buildPPDeskTopBar(),
+          ],
+        ),
+        SizedBox(height: compact ? 16 : 24),
+        Expanded(
+          child: SingleChildScrollView(
+            key: const PageStorageKey('ppdesk_toolbox_scroll'),
+            primary: false,
+            child: Column(
+              children: [
+                LayoutBuilder(builder: (context, constraints) {
+                  final columns = constraints.maxWidth < 700 ? 2 : 4;
+                  return GridView.builder(
+                    padding: EdgeInsets.zero,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: tools.length,
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: columns,
+                      crossAxisSpacing: compact ? 12 : 18,
+                      mainAxisSpacing: compact ? 12 : 18,
+                      childAspectRatio: compact ? 1.36 : 1.05,
+                    ),
+                    itemBuilder: (_, index) => _PPDeskToolCard(
+                      tool: tools[index],
+                      compact: compact,
+                    ),
+                  );
+                }),
+                SizedBox(height: compact ? 14 : 22),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                        flex: 5,
+                        child:
+                            _buildPPDeskRecentTools(recent, compact: compact)),
+                    SizedBox(width: compact ? 12 : 18),
+                    Expanded(
+                        flex: 4,
+                        child: _buildPPDeskSafetyTip(compact: compact)),
+                  ],
+                ),
+                SizedBox(height: compact ? 14 : 22),
+                _buildPPDeskHelpBar(compact: compact),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPPDeskRecentTools(List<_PPDeskToolSpec> tools,
+      {required bool compact}) {
+    return Container(
+      padding: EdgeInsets.all(compact ? 14 : 18),
+      decoration: _ppDeskCardDecoration(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text('最近使用',
+                  style: TextStyle(
+                      fontSize: compact ? 15 : 17,
+                      fontWeight: FontWeight.w900,
+                      color: const Color(0xFF101828))),
+              const Spacer(),
+              InkWell(
+                onTap: () => showToast('最近使用会根据操作频率自动更新'),
+                borderRadius: BorderRadius.circular(8),
+                child: Row(
+                  children: [
+                    const Text('管理',
+                        style: TextStyle(
+                            color: Color(0xFF66738A),
+                            fontWeight: FontWeight.w700)),
+                    const SizedBox(width: 6),
+                    _ppDeskSvg('ppdesk_settings',
+                        color: const Color(0xFF66738A), size: 16),
+                  ],
+                ).paddingSymmetric(horizontal: 8, vertical: 6),
+              ),
+            ],
+          ),
+          SizedBox(height: compact ? 10 : 16),
+          Row(
+            children: [
+              for (var i = 0; i < tools.length; i++) ...[
+                Expanded(
+                  child: _PPDeskRecentToolCard(
+                    tool: tools[i],
+                    subtitle: ['刚刚使用', '5 分钟前', '12 小时前', '1 小时前'][i],
+                    compact: compact,
+                  ),
+                ),
+                if (i != tools.length - 1) SizedBox(width: compact ? 8 : 12),
+              ],
+            ],
+          ),
+          SizedBox(height: compact ? 10 : 14),
+          Row(
+            children: [
+              _ppDeskSvg('ppdesk_clock',
+                  color: const Color(0xFF66738A), size: 16),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text('提示：工具会根据使用频率自动更新',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 12, color: Color(0xFF66738A))),
+              ),
+              InkWell(
+                onTap: () => showToast('已清空本次显示记录'),
+                borderRadius: BorderRadius.circular(8),
+                child: Row(
+                  children: [
+                    const Text('清空记录',
+                        style: TextStyle(
+                            color: Color(0xFF2D6BFF),
+                            fontWeight: FontWeight.w700)),
+                    _ppDeskSvg('ppdesk_chevron_right',
+                        color: const Color(0xFF2D6BFF), size: 16),
+                  ],
+                ).paddingSymmetric(horizontal: 8, vertical: 6),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPPDeskSafetyTip({required bool compact}) {
+    return Container(
+      padding: EdgeInsets.all(compact ? 14 : 18),
+      decoration: _ppDeskCardDecoration(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('安全提示',
+              style: TextStyle(
+                  fontSize: compact ? 15 : 17,
+                  fontWeight: FontWeight.w900,
+                  color: const Color(0xFF101828))),
+          SizedBox(height: compact ? 12 : 18),
+          Container(
+            padding: EdgeInsets.all(compact ? 14 : 18),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF4F8FF),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFDCE8FF)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: compact ? 52 : 66,
+                  height: compact ? 52 : 66,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEAF0FF),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: _ppDeskSvg('ppdesk_shield',
+                      color: const Color(0xFF2D6BFF), size: compact ? 30 : 36),
+                ),
+                SizedBox(width: compact ? 12 : 18),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('安全连接，放心使用',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFF101828))),
+                      SizedBox(height: 8),
+                      Text('所有连接均采用端到端加密传输，请勿在远程设备上处理敏感信息。',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              fontSize: 12, color: Color(0xFF66738A))),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: compact ? 10 : 14),
+          InkWell(
+            onTap: () => setState(() {
+              _ppDeskPage = 3;
+              _ppDeskSettingTab = SettingsTabKey.safety;
+            }),
+            borderRadius: BorderRadius.circular(8),
+            child: Row(
+              children: [
+                const Text('了解更多安全设置',
+                    style: TextStyle(
+                        color: Color(0xFF2D6BFF), fontWeight: FontWeight.w800)),
+                _ppDeskSvg('ppdesk_chevron_right',
+                    color: const Color(0xFF2D6BFF), size: 16),
+              ],
+            ).paddingSymmetric(horizontal: 8, vertical: 6),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPPDeskHelpBar({required bool compact}) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+          horizontal: compact ? 16 : 22, vertical: compact ? 12 : 16),
+      decoration: _ppDeskCardDecoration(),
+      child: Row(
+        children: [
+          _ppDeskSvg('ppdesk_headset',
+              color: const Color(0xFF2D6BFF), size: compact ? 24 : 28),
+          SizedBox(width: compact ? 12 : 18),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('使用帮助',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF101828))),
+                SizedBox(height: 4),
+                Text('遇到问题？查看帮助文档或联系客服获取支持。',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 12, color: Color(0xFF66738A))),
+              ],
+            ),
+          ),
+          _PPDeskHelpAction(
+              icon: 'ppdesk_book',
+              label: '帮助文档',
+              onTap: () => showToast('帮助文档待接入')),
+          _PPDeskHelpAction(
+              icon: 'ppdesk_play',
+              label: '视频教程',
+              onTap: () => showToast('视频教程待接入')),
+          _PPDeskHelpAction(
+              icon: 'ppdesk_headset',
+              label: '联系客服',
+              onTap: () => showToast('客服入口待接入')),
+        ],
+      ),
+    );
   }
 
   Widget _buildPPDeskQuickConnect(BuildContext context,
@@ -3386,6 +3736,233 @@ class _PPDeskGroupItemState extends State<_PPDeskGroupItem> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _PPDeskToolSpec {
+  const _PPDeskToolSpec({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.color,
+    required this.onTap,
+  });
+
+  final String icon;
+  final String title;
+  final String subtitle;
+  final Color color;
+  final VoidCallback onTap;
+}
+
+class _PPDeskToolCard extends StatefulWidget {
+  const _PPDeskToolCard({required this.tool, required this.compact});
+
+  final _PPDeskToolSpec tool;
+  final bool compact;
+
+  @override
+  State<_PPDeskToolCard> createState() => _PPDeskToolCardState();
+}
+
+class _PPDeskToolCardState extends State<_PPDeskToolCard> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: InkWell(
+        onTap: widget.tool.onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 140),
+          padding: EdgeInsets.all(widget.compact ? 18 : 24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+                color: _hover
+                    ? widget.tool.color.withValues(alpha: .35)
+                    : const Color(0xFFE1E8F4)),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF1B3A6D)
+                    .withValues(alpha: _hover ? .10 : .04),
+                blurRadius: _hover ? 24 : 14,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: widget.compact ? 54 : 66,
+                height: widget.compact ? 54 : 66,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: widget.tool.color.withValues(alpha: .12),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: SvgPicture.asset('assets/${widget.tool.icon}.svg',
+                    width: widget.compact ? 30 : 36,
+                    height: widget.compact ? 30 : 36,
+                    colorFilter:
+                        ColorFilter.mode(widget.tool.color, BlendMode.srcIn)),
+              ),
+              const Spacer(),
+              Text(widget.tool.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      fontSize: widget.compact ? 17 : 20,
+                      fontWeight: FontWeight.w900,
+                      color: const Color(0xFF101828))),
+              SizedBox(height: widget.compact ? 6 : 8),
+              Text(widget.tool.subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      fontSize: widget.compact ? 12 : 13,
+                      color: const Color(0xFF66738A))),
+              const Spacer(),
+              Align(
+                alignment: Alignment.centerRight,
+                child: SvgPicture.asset('assets/ppdesk_chevron_right.svg',
+                    width: 18,
+                    height: 18,
+                    colorFilter: ColorFilter.mode(
+                        _hover ? widget.tool.color : const Color(0xFF1F2A44),
+                        BlendMode.srcIn)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PPDeskRecentToolCard extends StatefulWidget {
+  const _PPDeskRecentToolCard({
+    required this.tool,
+    required this.subtitle,
+    required this.compact,
+  });
+
+  final _PPDeskToolSpec tool;
+  final String subtitle;
+  final bool compact;
+
+  @override
+  State<_PPDeskRecentToolCard> createState() => _PPDeskRecentToolCardState();
+}
+
+class _PPDeskRecentToolCardState extends State<_PPDeskRecentToolCard> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: InkWell(
+        onTap: widget.tool.onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          padding: EdgeInsets.all(widget.compact ? 10 : 12),
+          decoration: BoxDecoration(
+            color: _hover ? const Color(0xFFF7FAFF) : Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: const Color(0xFFE1E8F4)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: widget.compact ? 32 : 38,
+                height: widget.compact ? 32 : 38,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: widget.tool.color.withValues(alpha: .12),
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: SvgPicture.asset('assets/${widget.tool.icon}.svg',
+                    width: widget.compact ? 18 : 22,
+                    height: widget.compact ? 18 : 22,
+                    colorFilter:
+                        ColorFilter.mode(widget.tool.color, BlendMode.srcIn)),
+              ),
+              SizedBox(height: widget.compact ? 8 : 10),
+              Text(widget.tool.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      fontSize: widget.compact ? 12 : 13,
+                      fontWeight: FontWeight.w900,
+                      color: const Color(0xFF101828))),
+              const SizedBox(height: 3),
+              Text(widget.subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style:
+                      const TextStyle(fontSize: 11, color: Color(0xFF66738A))),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PPDeskHelpAction extends StatefulWidget {
+  const _PPDeskHelpAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final String icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  State<_PPDeskHelpAction> createState() => _PPDeskHelpActionState();
+}
+
+class _PPDeskHelpActionState extends State<_PPDeskHelpAction> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _hover ? const Color(0xFF2D6BFF) : const Color(0xFF66738A);
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: InkWell(
+        onTap: widget.onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Row(
+          children: [
+            SvgPicture.asset('assets/${widget.icon}.svg',
+                width: 18,
+                height: 18,
+                colorFilter: ColorFilter.mode(color, BlendMode.srcIn)),
+            const SizedBox(width: 8),
+            Text(widget.label,
+                style: TextStyle(
+                    fontSize: 13, color: color, fontWeight: FontWeight.w800)),
+            SvgPicture.asset('assets/ppdesk_chevron_right.svg',
+                width: 16,
+                height: 16,
+                colorFilter: ColorFilter.mode(color, BlendMode.srcIn)),
+          ],
+        ).paddingSymmetric(horizontal: 10, vertical: 8),
       ),
     );
   }
