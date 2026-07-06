@@ -10,11 +10,15 @@ import 'package:flutter_hbb/common/widgets/autocomplete.dart';
 import 'package:flutter_hbb/common.dart';
 import 'package:flutter_hbb/common/widgets/animated_rotation_widget.dart';
 import 'package:flutter_hbb/common/widgets/custom_password.dart';
+import 'package:flutter_hbb/common/widgets/dialog.dart' as ppdesk_dialogs;
+import 'package:flutter_hbb/common/widgets/login.dart' as ppdesk_login;
 import 'package:flutter_hbb/consts.dart';
 import 'package:flutter_hbb/desktop/pages/connection_page.dart';
 import 'package:flutter_hbb/desktop/pages/desktop_setting_page.dart';
 import 'package:flutter_hbb/desktop/pages/desktop_tab_page.dart';
 import 'package:flutter_hbb/desktop/widgets/update_progress.dart';
+import 'package:flutter_hbb/mobile/widgets/dialog.dart'
+    as ppdesk_mobile_dialogs;
 import 'package:flutter_hbb/models/platform_model.dart';
 import 'package:flutter_hbb/models/peer_model.dart';
 import 'package:flutter_hbb/models/server_model.dart';
@@ -732,6 +736,10 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           InkWell(
             onTap: () => showToast('请在查看全部中管理回收站'),
             borderRadius: BorderRadius.circular(8),
+            hoverColor: Colors.transparent,
+            splashColor: Colors.transparent,
+            highlightColor: Colors.transparent,
+            focusColor: Colors.transparent,
             child: Row(
               children: [
                 SvgPicture.asset('assets/trash.svg',
@@ -1374,10 +1382,8 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                       Expanded(
                         child: KeyedSubtree(
                           key: ValueKey(selected),
-                          child: DesktopSettingPage(
-                            initialTabkey: selected,
-                            embedded: true,
-                          ),
+                          child: _buildPPDeskSettingsContent(selected,
+                              compact: compact),
                         ),
                       ),
                     ],
@@ -1491,6 +1497,577 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         ],
       ),
     );
+  }
+
+  Widget _buildPPDeskSettingsContent(SettingsTabKey selected,
+      {required bool compact}) {
+    return SingleChildScrollView(
+      key: PageStorageKey('ppdesk_settings_${selected.toString()}'),
+      primary: false,
+      padding: EdgeInsets.all(compact ? 14 : 18),
+      child: switch (selected) {
+        SettingsTabKey.account => _buildPPDeskAccountSettings(compact: compact),
+        SettingsTabKey.general => _buildPPDeskGeneralSettings(compact: compact),
+        SettingsTabKey.safety => _buildPPDeskSafetySettings(compact: compact),
+        SettingsTabKey.network => _buildPPDeskNetworkSettings(compact: compact),
+        SettingsTabKey.display => _buildPPDeskDisplaySettings(compact: compact),
+        SettingsTabKey.plugin => _buildPPDeskPluginSettings(compact: compact),
+        SettingsTabKey.printer => _buildPPDeskPrinterSettings(compact: compact),
+        SettingsTabKey.about => _buildPPDeskAboutSettings(compact: compact),
+      },
+    );
+  }
+
+  Widget _buildPPDeskAccountSettings({required bool compact}) {
+    return Obx(() {
+      final loggedIn = gFFI.userModel.userName.value.isNotEmpty;
+      final userName = loggedIn ? gFFI.userModel.userName.value : 'admin';
+      final displayName =
+          loggedIn ? gFFI.userModel.displayNameOrUserName : 'admin';
+      final handle = loggedIn ? '@${gFFI.userModel.userName.value}' : '本地管理员';
+      return _PPDeskSettingsSection(
+        icon: 'ppdesk_user',
+        title: '账号',
+        compact: compact,
+        children: [
+          _PPDeskAccountPanel(
+            compact: compact,
+            displayName: displayName,
+            handle: handle,
+            signedIn: loggedIn,
+          ),
+          _PPDeskSettingActionRow(
+            icon: loggedIn ? 'ppdesk_logout' : 'ppdesk_user',
+            title: loggedIn ? '退出登录' : '登录账号',
+            subtitle: loggedIn ? '当前账号：$userName' : '登录后可同步设备、地址簿与审计记录',
+            compact: compact,
+            danger: loggedIn,
+            onTap: () {
+              loggedIn
+                  ? ppdesk_login.logOutConfirmDialog()
+                  : ppdesk_login.loginDialog();
+            },
+          ),
+          _PPDeskSettingActionRow(
+            icon: 'ppdesk_lock',
+            title: '修改永久密码',
+            subtitle: '用于无人值守访问的本机永久密码',
+            compact: compact,
+            onTap: () => setPasswordDialog(),
+          ),
+          _PPDeskSettingInfoRow(
+            icon: 'ppdesk_shield',
+            title: '认证状态',
+            value: loggedIn ? '已登录' : '本地模式',
+            compact: compact,
+          ),
+        ],
+      );
+    });
+  }
+
+  Widget _buildPPDeskGeneralSettings({required bool compact}) {
+    final customClient = bind.isCustomClient();
+    final incomingOnly = bind.isIncomingOnly();
+    return Column(
+      children: [
+        _PPDeskSettingsSection(
+          icon: 'ppdesk_settings',
+          title: '基础偏好',
+          compact: compact,
+          children: [
+            _PPDeskSettingSelectRow(
+              icon: 'ppdesk_info',
+              title: '语言',
+              value: _ppDeskLanguageLabel(),
+              subtitle: '界面语言配置',
+              compact: compact,
+              onTap: () => showToast('语言切换将在后续接入 PPDesk 语言选择器'),
+            ),
+            _PPDeskSettingSelectRow(
+              icon: 'ppdesk_display',
+              title: '主题',
+              value: _ppDeskThemeLabel(),
+              subtitle: '点击在浅色、深色、跟随系统之间切换',
+              compact: compact,
+              onTap: _cyclePPDeskTheme,
+              disabled: isOptionFixed(kCommConfKeyTheme),
+            ),
+            if (!isWeb && !incomingOnly)
+              _ppDeskOptionSwitch(
+                icon: 'ppdesk_tabs',
+                title: '关闭多个标签页前确认',
+                subtitle: '减少误关闭远程会话的风险',
+                optionKey: kOptionEnableConfirmClosingTabs,
+                compact: compact,
+                isServer: false,
+              ),
+            if (!isWeb && !incomingOnly)
+              _ppDeskOptionSwitch(
+                icon: 'ppdesk_plus',
+                title: '新连接打开为标签页',
+                subtitle: '保持多个远程连接在同一窗口管理',
+                optionKey: kOptionOpenNewConnInTabs,
+                compact: compact,
+                isServer: false,
+              ),
+            if (!isWeb && !customClient)
+              _ppDeskOptionSwitch(
+                icon: 'ppdesk_restart',
+                title: '启动时检查更新',
+                subtitle: '打开客户端时自动检查新版本',
+                optionKey: kOptionEnableCheckUpdate,
+                compact: compact,
+                isServer: false,
+              ),
+          ],
+        ),
+        SizedBox(height: compact ? 12 : 16),
+        _PPDeskSettingsSection(
+          icon: 'ppdesk_device',
+          title: '连接体验',
+          compact: compact,
+          children: [
+            if (!isWeb && !incomingOnly)
+              _ppDeskOptionSwitch(
+                icon: 'ppdesk_network',
+                title: '启用 UDP 打洞',
+                subtitle: '优先尝试点对点连接',
+                optionKey: kOptionEnableUdpPunch,
+                compact: compact,
+                isServer: false,
+              ),
+            if (!isWeb && !incomingOnly)
+              _ppDeskOptionSwitch(
+                icon: 'ppdesk_network',
+                title: '启用 IPv6 P2P',
+                subtitle: '允许通过 IPv6 建立点对点连接',
+                optionKey: kOptionEnableIpv6Punch,
+                compact: compact,
+                isServer: false,
+              ),
+            if (!bind.isIncomingOnly())
+              _ppDeskOptionSwitch(
+                icon: 'ppdesk_lock',
+                title: '远程会话期间保持唤醒',
+                subtitle: '避免连接中本机进入睡眠',
+                optionKey: kOptionKeepAwakeDuringOutgoingSessions,
+                compact: compact,
+                isServer: false,
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPPDeskSafetySettings({required bool compact}) {
+    final accessMode = bind.mainGetOptionSync(key: kOptionAccessMode);
+    final accessLocked = isOptionFixed(kOptionAccessMode);
+    return Column(
+      children: [
+        _PPDeskSettingsSection(
+          icon: 'ppdesk_shield',
+          title: '访问权限',
+          compact: compact,
+          children: [
+            _PPDeskSettingSelectRow(
+              icon: 'ppdesk_shield',
+              title: '访问模式',
+              value: _ppDeskAccessModeLabel(accessMode),
+              subtitle: '点击在自定义、完全访问、仅屏幕共享之间切换',
+              compact: compact,
+              disabled: accessLocked,
+              onTap: _cyclePPDeskAccessMode,
+            ),
+            _ppDeskOptionSwitch(
+              icon: 'ppdesk_keyboard',
+              title: '允许键盘和鼠标',
+              subtitle: '远端可控制本机输入',
+              optionKey: kOptionEnableKeyboard,
+              compact: compact,
+            ),
+            _ppDeskOptionSwitch(
+              icon: 'ppdesk_clipboard',
+              title: '允许剪贴板同步',
+              subtitle: '同步文本与图片内容',
+              optionKey: kOptionEnableClipboard,
+              compact: compact,
+            ),
+            _ppDeskOptionSwitch(
+              icon: 'ppdesk_folder',
+              title: '允许文件传输',
+              subtitle: '允许远程收发文件',
+              optionKey: kOptionEnableFileTransfer,
+              compact: compact,
+            ),
+            _ppDeskOptionSwitch(
+              icon: 'ppdesk_terminal',
+              title: '允许终端',
+              subtitle: '允许发起远程命令行会话',
+              optionKey: kOptionEnableTerminal,
+              compact: compact,
+            ),
+            _ppDeskOptionSwitch(
+              icon: 'ppdesk_restart',
+              title: '允许远程重启',
+              subtitle: '允许远端请求重启本机',
+              optionKey: kOptionEnableRemoteRestart,
+              compact: compact,
+            ),
+          ],
+        ),
+        SizedBox(height: compact ? 12 : 16),
+        _PPDeskSettingsSection(
+          icon: 'ppdesk_lock',
+          title: '认证与保护',
+          compact: compact,
+          children: [
+            _PPDeskSettingActionRow(
+              icon: 'ppdesk_lock',
+              title: '设置永久密码',
+              subtitle: '配置无人值守访问密码',
+              compact: compact,
+              onTap: () => setPasswordDialog(),
+            ),
+            _PPDeskSettingActionRow(
+              icon: 'ppdesk_restart',
+              title: '刷新一次性密码',
+              subtitle: '立即生成新的临时访问密码',
+              compact: compact,
+              onTap: () => bind.mainUpdateTemporaryPassword(),
+            ),
+            _PPDeskSettingActionRow(
+              icon: 'ppdesk_shield',
+              title: '两步验证',
+              subtitle: '配置账号二次验证',
+              compact: compact,
+              onTap: () => ppdesk_dialogs.change2fa(callback: () {
+                if (mounted) setState(() {});
+              }),
+            ),
+            _PPDeskSettingActionRow(
+              icon: 'ppdesk_device',
+              title: '受信任设备',
+              subtitle: '管理已授权的设备列表',
+              compact: compact,
+              onTap: ppdesk_dialogs.manageTrustedDeviceDialog,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPPDeskNetworkSettings({required bool compact}) {
+    final hideServer =
+        bind.mainGetBuildinOption(key: kOptionHideServerSetting) == 'Y';
+    final hideProxy =
+        isWeb || bind.mainGetBuildinOption(key: kOptionHideProxySetting) == 'Y';
+    final hideWebSocket = isWeb ||
+        bind.mainGetBuildinOption(key: kOptionHideWebSocketSetting) == 'Y';
+    return _PPDeskSettingsSection(
+      icon: 'ppdesk_network',
+      title: '网络与服务器',
+      compact: compact,
+      children: [
+        if (!hideServer)
+          _PPDeskSettingActionRow(
+            icon: 'ppdesk_server',
+            title: 'ID / Relay / API 服务器',
+            subtitle: '配置自有 PPDesk 服务器地址与公钥',
+            compact: compact,
+            onTap: () => ppdesk_mobile_dialogs.showServerSettings(
+                gFFI.dialogManager, setState),
+          ),
+        if (!hideProxy)
+          _PPDeskSettingActionRow(
+            icon: 'ppdesk_network',
+            title: 'Socks5 / HTTP(S) 代理',
+            subtitle: '配置客户端网络代理',
+            compact: compact,
+            onTap: changeSocks5Proxy,
+          ),
+        if (!hideWebSocket)
+          _ppDeskOptionSwitch(
+            icon: 'ppdesk_network',
+            title: '使用 WebSocket',
+            subtitle: '兼容受限网络环境下的服务连接',
+            optionKey: kOptionAllowWebSocket,
+            compact: compact,
+          ),
+        if (!isWeb)
+          _ppDeskOptionSwitch(
+            icon: 'ppdesk_shield',
+            title: '允许不安全 TLS 回退',
+            subtitle: '仅在自有网络兼容场景下使用',
+            optionKey: kOptionAllowInsecureTLSFallback,
+            compact: compact,
+          ),
+        if (!isWeb && !bind.isOutgoingOnly())
+          _PPDeskSettingSwitchRow(
+            icon: 'ppdesk_network',
+            title: '禁用 UDP',
+            subtitle: '强制连接走 TCP 中继路径',
+            value: bind.mainGetOptionSync(key: kOptionDisableUdp) == 'Y',
+            compact: compact,
+            enabled: !isOptionFixed(kOptionDisableUdp),
+            onChanged: (value) async {
+              await bind.mainSetOption(
+                  key: kOptionDisableUdp, value: value ? 'Y' : 'N');
+              if (mounted) setState(() {});
+            },
+          ),
+      ],
+    );
+  }
+
+  Widget _buildPPDeskDisplaySettings({required bool compact}) {
+    return Column(
+      children: [
+        _PPDeskSettingsSection(
+          icon: 'ppdesk_display',
+          title: '远程显示默认值',
+          compact: compact,
+          children: [
+            _PPDeskSettingSelectRow(
+              icon: 'ppdesk_display',
+              title: '视图样式',
+              value: _ppDeskUserDefaultLabel(kOptionViewStyle),
+              subtitle: '远程桌面默认显示模式',
+              compact: compact,
+              onTap: () => showToast('视图样式选择器将在后续接入'),
+            ),
+            _PPDeskSettingSelectRow(
+              icon: 'ppdesk_scroll',
+              title: '滚动方式',
+              value: _ppDeskUserDefaultLabel(kOptionScrollStyle),
+              subtitle: '远程控制中的滚动行为',
+              compact: compact,
+              onTap: () => showToast('滚动方式选择器将在后续接入'),
+            ),
+            _PPDeskSettingSelectRow(
+              icon: 'ppdesk_image',
+              title: '图像质量',
+              value: _ppDeskUserDefaultLabel(kOptionImageQuality),
+              subtitle: '画质与流畅度的默认策略',
+              compact: compact,
+              onTap: () => showToast('图像质量选择器将在后续接入'),
+            ),
+            _PPDeskSettingSelectRow(
+              icon: 'ppdesk_codec',
+              title: '编解码偏好',
+              value: _ppDeskUserDefaultLabel(kOptionCodecPreference),
+              subtitle: '会话视频编解码默认选择',
+              compact: compact,
+              onTap: () => showToast('编解码偏好选择器将在后续接入'),
+            ),
+          ],
+        ),
+        SizedBox(height: compact ? 12 : 16),
+        _PPDeskSettingsSection(
+          icon: 'ppdesk_clipboard',
+          title: '会话体验',
+          compact: compact,
+          children: [
+            _PPDeskSettingSwitchRow(
+              icon: 'ppdesk_clipboard',
+              title: '文件复制粘贴',
+              subtitle: '允许在会话中复制粘贴文件',
+              value: bind.mainGetUserDefaultOption(
+                      key: kOptionEnableFileCopyPaste) ==
+                  'Y',
+              compact: compact,
+              enabled: !isOptionFixed(kOptionEnableFileCopyPaste),
+              onChanged: (value) async {
+                await bind.mainSetUserDefaultOption(
+                    key: kOptionEnableFileCopyPaste, value: value ? 'Y' : 'N');
+                if (mounted) setState(() {});
+              },
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPPDeskPluginSettings({required bool compact}) {
+    return _PPDeskSettingsSection(
+      icon: 'ppdesk_folder',
+      title: '插件',
+      compact: compact,
+      children: [
+        _PPDeskSettingInfoRow(
+          icon: 'ppdesk_info',
+          title: '插件能力',
+          value: bind.pluginFeatureIsEnabled() ? '已启用' : '未启用',
+          compact: compact,
+        ),
+        _PPDeskSettingActionRow(
+          icon: 'ppdesk_folder',
+          title: '插件管理',
+          subtitle: '当前客户端未接入 PPDesk 插件市场 UI',
+          compact: compact,
+          onTap: () => showToast('插件管理入口待接入'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPPDeskPrinterSettings({required bool compact}) {
+    return _PPDeskSettingsSection(
+      icon: 'ppdesk_file',
+      title: '远程打印',
+      compact: compact,
+      children: [
+        _ppDeskOptionSwitch(
+          icon: 'ppdesk_file',
+          title: '允许远程打印',
+          subtitle: '允许远程会话访问打印能力',
+          optionKey: kOptionEnableRemotePrinter,
+          compact: compact,
+          enabled: isWindows,
+        ),
+        _PPDeskSettingInfoRow(
+          icon: 'ppdesk_info',
+          title: '当前平台',
+          value: isWindows ? 'Windows 支持远程打印' : '当前平台暂不支持远程打印配置',
+          compact: compact,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPPDeskAboutSettings({required bool compact}) {
+    return FutureBuilder<String>(
+      future: bind.mainGetVersion(),
+      builder: (context, snapshot) {
+        final versionText = snapshot.data ?? version;
+        return _PPDeskSettingsSection(
+          icon: 'ppdesk_info',
+          title: '关于 PPDesk',
+          compact: compact,
+          children: [
+            _PPDeskSettingInfoRow(
+              icon: 'ppdesk_logo',
+              title: '产品名称',
+              value: 'PP·Desk / 皮皮远程',
+              compact: compact,
+            ),
+            _PPDeskSettingInfoRow(
+              icon: 'ppdesk_info',
+              title: '当前版本',
+              value: versionText.isEmpty ? '读取中' : versionText,
+              compact: compact,
+            ),
+            _PPDeskSettingInfoRow(
+              icon: 'ppdesk_server',
+              title: '底层能力',
+              value: '跟随 RustDesk 客户端能力层',
+              compact: compact,
+            ),
+            _PPDeskSettingActionRow(
+              icon: 'ppdesk_book',
+              title: '开源协议与说明',
+              subtitle: '查看客户端依赖与上游说明',
+              compact: compact,
+              onTap: () => showToast('开源说明页待接入'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _ppDeskOptionSwitch({
+    required String icon,
+    required String title,
+    required String subtitle,
+    required String optionKey,
+    required bool compact,
+    bool isServer = true,
+    bool reverse = false,
+    bool enabled = true,
+  }) {
+    bool value = isServer
+        ? mainGetBoolOptionSync(optionKey)
+        : mainGetLocalBoolOptionSync(optionKey);
+    if (reverse) value = !value;
+    return _PPDeskSettingSwitchRow(
+      icon: icon,
+      title: title,
+      subtitle: subtitle,
+      value: value,
+      compact: compact,
+      enabled: enabled && !isOptionFixed(optionKey),
+      onChanged: (next) async {
+        final stored = reverse ? !next : next;
+        if (isServer) {
+          await mainSetBoolOption(optionKey, stored);
+        } else {
+          await mainSetLocalBoolOption(optionKey, stored);
+        }
+        if (mounted) setState(() {});
+      },
+    );
+  }
+
+  String _ppDeskLanguageLabel() {
+    final lang = bind.mainGetLocalOption(key: kCommConfKeyLang);
+    if (lang.isEmpty || lang == defaultOptionLang) {
+      return '跟随系统';
+    }
+    return lang;
+  }
+
+  String _ppDeskThemeLabel() {
+    return switch (MyTheme.getThemeModePreference().toShortString()) {
+      'light' => '浅色',
+      'dark' => '深色',
+      _ => '跟随系统',
+    };
+  }
+
+  Future<void> _cyclePPDeskTheme() async {
+    if (isOptionFixed(kCommConfKeyTheme)) return;
+    final current = MyTheme.getThemeModePreference().toShortString();
+    final next = switch (current) {
+      'light' => 'dark',
+      'dark' => 'system',
+      _ => 'light',
+    };
+    await MyTheme.changeDarkMode(MyTheme.themeModeFromString(next));
+    if (mounted) setState(() {});
+  }
+
+  String _ppDeskAccessModeLabel(String mode) {
+    return switch (mode) {
+      'full' => '完全访问',
+      'view' => '仅屏幕共享',
+      _ => '自定义',
+    };
+  }
+
+  Future<void> _cyclePPDeskAccessMode() async {
+    if (isOptionFixed(kOptionAccessMode)) return;
+    final current = bind.mainGetOptionSync(key: kOptionAccessMode);
+    final next = current == defaultOptionAccessMode || current.isEmpty
+        ? 'full'
+        : current == 'full'
+            ? 'view'
+            : defaultOptionAccessMode;
+    await bind.mainSetOption(key: kOptionAccessMode, value: next);
+    if (mounted) setState(() {});
+  }
+
+  String _ppDeskUserDefaultLabel(String key) {
+    final value = bind.mainGetUserDefaultOption(key: key);
+    if (value.isEmpty ||
+        value == defaultOptionNo ||
+        value == defaultOptionYes) {
+      return '默认';
+    }
+    return value;
   }
 
   String _ppDeskSettingLabel(SettingsTabKey tab) {
@@ -1675,6 +2252,10 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               InkWell(
                 onTap: () => showToast('最近使用会根据操作频率自动更新'),
                 borderRadius: BorderRadius.circular(8),
+                hoverColor: Colors.transparent,
+                splashColor: Colors.transparent,
+                highlightColor: Colors.transparent,
+                focusColor: Colors.transparent,
                 child: Row(
                   children: [
                     const Text('管理',
@@ -1719,6 +2300,10 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               InkWell(
                 onTap: () => showToast('已清空本次显示记录'),
                 borderRadius: BorderRadius.circular(8),
+                hoverColor: Colors.transparent,
+                splashColor: Colors.transparent,
+                highlightColor: Colors.transparent,
+                focusColor: Colors.transparent,
                 child: Row(
                   children: [
                     const Text('清空记录',
@@ -1801,6 +2386,10 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               _ppDeskSettingTab = SettingsTabKey.safety;
             }),
             borderRadius: BorderRadius.circular(8),
+            hoverColor: Colors.transparent,
+            splashColor: Colors.transparent,
+            highlightColor: Colors.transparent,
+            focusColor: Colors.transparent,
             child: Row(
               children: [
                 const Text('了解更多安全设置',
@@ -1988,31 +2577,71 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                 textEditingController: _ppDeskTextController,
                 fieldViewBuilder:
                     (context, controller, focusNode, onFieldSubmitted) {
-                  updateTextAndPreserveSelection(
-                      controller, _ppDeskIdController.text);
-                  return TextField(
-                    autocorrect: false,
-                    enableSuggestions: false,
-                    keyboardType: TextInputType.visiblePassword,
-                    focusNode: focusNode,
-                    controller: controller,
-                    inputFormatters: [IDTextInputFormatter()],
-                    style: TextStyle(
-                        fontSize: compact ? 16 : 18,
-                        height: 1.35,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF101828)),
-                    decoration: InputDecoration(
-                      border: InputBorder.none,
-                      hintText: '请输入设备 ID',
-                      hintStyle: const TextStyle(
-                          color: Color(0xFFA1AEC2), fontSize: 16),
-                      contentPadding: EdgeInsets.symmetric(
-                          horizontal: 12, vertical: compact ? 11 : 16),
+                  final text = _ppDeskIdController.text;
+                  final targetValue = TextEditingValue(
+                    text: text,
+                    selection: TextSelection.collapsed(offset: text.length),
+                    composing: TextRange.empty,
+                  );
+                  if (controller.value.text != text ||
+                      !controller.value.selection.isCollapsed ||
+                      controller.value.composing.isValid) {
+                    controller.value = targetValue;
+                  }
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    final currentText = controller.value.text;
+                    if (!controller.value.selection.isCollapsed ||
+                        controller.value.composing.isValid) {
+                      controller.value = TextEditingValue(
+                        text: currentText,
+                        selection:
+                            TextSelection.collapsed(offset: currentText.length),
+                        composing: TextRange.empty,
+                      );
+                    }
+                  });
+                  return TextSelectionTheme(
+                    data: const TextSelectionThemeData(
+                      cursorColor: Color(0xFF2D6BFF),
+                      selectionColor: Color(0x222D6BFF),
+                      selectionHandleColor: Color(0xFF2D6BFF),
                     ),
-                    onChanged: (v) => _ppDeskIdController.id = v,
-                    onSubmitted: (_) => _ppDeskConnect(),
-                  ).workaroundFreezeLinuxMint();
+                    child: ColoredBox(
+                      color: Colors.white,
+                      child: TextField(
+                        autocorrect: false,
+                        enableSuggestions: false,
+                        enableInteractiveSelection: false,
+                        keyboardType: TextInputType.visiblePassword,
+                        focusNode: focusNode,
+                        controller: controller,
+                        inputFormatters: [IDTextInputFormatter()],
+                        cursorColor: const Color(0xFF2D6BFF),
+                        style: TextStyle(
+                            fontSize: compact ? 16 : 18,
+                            height: 1.35,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF101828)),
+                        decoration: InputDecoration(
+                          isDense: true,
+                          filled: true,
+                          fillColor: Colors.white,
+                          hoverColor: Colors.white,
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          disabledBorder: InputBorder.none,
+                          hintText: '请输入设备 ID',
+                          hintStyle: const TextStyle(
+                              color: Color(0xFFA1AEC2), fontSize: 16),
+                          contentPadding: EdgeInsets.symmetric(
+                              horizontal: 12, vertical: compact ? 12 : 18),
+                        ),
+                        onChanged: (v) => _ppDeskIdController.id = v,
+                        onSubmitted: (_) => _ppDeskConnect(),
+                      ).workaroundFreezeLinuxMint(),
+                    ),
+                  );
                 },
                 onSelected: (peer) {
                   setState(() {
@@ -2022,29 +2651,49 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                 },
                 optionsViewBuilder: (context, onSelected, options) {
                   final opts = _ppDeskAutocompleteOpts;
-                  final maxHeight = (opts.length * 50.0).clamp(52.0, 220.0);
+                  final maxHeight = (opts.length * 62.0).clamp(70.0, 240.0);
                   return Align(
                     alignment: Alignment.topLeft,
                     child: Material(
-                      elevation: 8,
-                      borderRadius: BorderRadius.circular(12),
-                      child: ConstrainedBox(
-                        constraints:
-                            BoxConstraints(maxHeight: maxHeight, maxWidth: 420),
+                      color: Colors.transparent,
+                      child: Container(
+                        margin: const EdgeInsets.only(top: 8),
+                        constraints: BoxConstraints(
+                            maxHeight: maxHeight, minWidth: 420, maxWidth: 560),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: const Color(0xFFE1E8F4)),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x221B3A6D),
+                              blurRadius: 22,
+                              offset: Offset(0, 10),
+                            ),
+                          ],
+                        ),
+                        clipBehavior: Clip.antiAlias,
                         child: _ppDeskAllPeersLoader.peers.isEmpty &&
                                 !_ppDeskAllPeersLoader.isPeersLoaded
                             ? const SizedBox(
-                                height: 80,
-                                child:
-                                    Center(child: CircularProgressIndicator()))
-                            : ListView(
+                                height: 72,
+                                child: Center(
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2)))
+                            : ListView.separated(
                                 padding:
-                                    const EdgeInsets.symmetric(vertical: 6),
-                                children: opts
-                                    .map((peer) => AutocompletePeerTile(
-                                        onSelect: () => onSelected(peer),
-                                        peer: peer))
-                                    .toList(),
+                                    const EdgeInsets.symmetric(vertical: 8),
+                                itemCount: opts.length,
+                                separatorBuilder: (_, __) => const Divider(
+                                    height: 1, color: Color(0xFFE8EEF8)),
+                                itemBuilder: (_, index) {
+                                  final peer = opts.elementAt(index);
+                                  return _PPDeskAutocompleteRow(
+                                    peer: peer,
+                                    compact: compact,
+                                    onTap: () => onSelected(peer),
+                                  );
+                                },
                               ),
                       ),
                     ),
@@ -2179,6 +2828,10 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                   InkWell(
                     onTap: () => setState(() => _ppDeskPage = 2),
                     borderRadius: BorderRadius.circular(8),
+                    hoverColor: Colors.transparent,
+                    splashColor: Colors.transparent,
+                    highlightColor: Colors.transparent,
+                    focusColor: Colors.transparent,
                     child: Row(
                       children: [
                         const Text('查看全部',
@@ -2325,7 +2978,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       }
       final textLength = _ppDeskTextController.value.text.length;
       _ppDeskTextController.selection =
-          TextSelection(baseOffset: 0, extentOffset: textLength);
+          TextSelection.collapsed(offset: textLength);
     }
   }
 
@@ -3202,6 +3855,108 @@ class _PPDeskNavItem extends StatefulWidget {
   State<_PPDeskNavItem> createState() => _PPDeskNavItemState();
 }
 
+class _PPDeskAutocompleteRow extends StatefulWidget {
+  const _PPDeskAutocompleteRow({
+    required this.peer,
+    required this.compact,
+    required this.onTap,
+  });
+
+  final Peer peer;
+  final bool compact;
+  final VoidCallback onTap;
+
+  @override
+  State<_PPDeskAutocompleteRow> createState() => _PPDeskAutocompleteRowState();
+}
+
+class _PPDeskAutocompleteRowState extends State<_PPDeskAutocompleteRow> {
+  bool _hover = false;
+
+  String get _name {
+    final peer = widget.peer;
+    final name = peer.alias.isNotEmpty
+        ? peer.alias
+        : peer.hostname.isNotEmpty
+            ? peer.hostname
+            : peer.username;
+    return name.isEmpty ? '未命名设备' : name;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final online = widget.peer.online;
+    final statusColor =
+        online ? const Color(0xFF20C66B) : const Color(0xFFFF8A1F);
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          height: widget.compact ? 56 : 62,
+          padding: EdgeInsets.symmetric(
+              horizontal: widget.compact ? 12 : 14,
+              vertical: widget.compact ? 8 : 10),
+          color: _hover ? const Color(0xFFF7FAFF) : Colors.white,
+          child: Row(
+            children: [
+              Container(
+                width: widget.compact ? 40 : 46,
+                height: widget.compact ? 40 : 46,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEAF0FF),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: getPlatformImage(widget.peer.platform,
+                    size: widget.compact ? 24 : 28),
+              ),
+              SizedBox(width: widget.compact ? 10 : 12),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 7,
+                          height: 7,
+                          decoration: BoxDecoration(
+                              color: statusColor, shape: BoxShape.circle),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(formatID(widget.peer.id),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                fontSize: widget.compact ? 15 : 16,
+                                color: const Color(0xFF101828),
+                                fontWeight: FontWeight.w900)),
+                      ],
+                    ),
+                    const SizedBox(height: 3),
+                    Text(_name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: widget.compact ? 12 : 13,
+                            color: const Color(0xFF66738A),
+                            fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _PPDeskNavItemState extends State<_PPDeskNavItem> {
   bool _hover = false;
 
@@ -3215,6 +3970,10 @@ class _PPDeskNavItemState extends State<_PPDeskNavItem> {
       child: InkWell(
         onTap: widget.onTap,
         borderRadius: BorderRadius.circular(10),
+        hoverColor: Colors.transparent,
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        focusColor: Colors.transparent,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 140),
           height: widget.compact ? 52 : 62,
@@ -3267,6 +4026,10 @@ class _PPDeskRoundButtonState extends State<_PPDeskRoundButton> {
       child: InkWell(
         onTap: widget.onTap,
         borderRadius: BorderRadius.circular(21),
+        hoverColor: Colors.transparent,
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        focusColor: Colors.transparent,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 140),
           width: 42,
@@ -3317,6 +4080,10 @@ class _PPDeskPrimaryButtonState extends State<_PPDeskPrimaryButton> {
       child: InkWell(
         onTap: widget.onTap,
         borderRadius: BorderRadius.circular(12),
+        hoverColor: Colors.transparent,
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        focusColor: Colors.transparent,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 140),
           width: widget.compact ? 156 : 206,
@@ -3449,6 +4216,10 @@ class _PPDeskSmallButtonState extends State<_PPDeskSmallButton> {
       child: InkWell(
         onTap: widget.onTap,
         borderRadius: BorderRadius.circular(8),
+        hoverColor: Colors.transparent,
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        focusColor: Colors.transparent,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
           height: widget.compact ? 30 : 34,
@@ -3508,6 +4279,10 @@ class _PPDeskOutlineButtonState extends State<_PPDeskOutlineButton> {
       child: InkWell(
         onTap: widget.onTap,
         borderRadius: BorderRadius.circular(10),
+        hoverColor: Colors.transparent,
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        focusColor: Colors.transparent,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
           height: widget.compact ? 44 : 52,
@@ -3573,6 +4348,10 @@ class _PPDeskPagerButtonState extends State<_PPDeskPagerButton> {
       child: InkWell(
         onTap: widget.onTap,
         borderRadius: BorderRadius.circular(8),
+        hoverColor: Colors.transparent,
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        focusColor: Colors.transparent,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
           width: widget.compact ? 34 : 38,
@@ -3630,6 +4409,10 @@ class _PPDeskSettingsTabItemState extends State<_PPDeskSettingsTabItem> {
       child: InkWell(
         onTap: widget.onTap,
         borderRadius: BorderRadius.circular(9),
+        hoverColor: Colors.transparent,
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        focusColor: Colors.transparent,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
           height: widget.compact ? 40 : 46,
@@ -3659,6 +4442,530 @@ class _PPDeskSettingsTabItemState extends State<_PPDeskSettingsTabItem> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _PPDeskSettingsSection extends StatelessWidget {
+  const _PPDeskSettingsSection({
+    required this.icon,
+    required this.title,
+    required this.children,
+    required this.compact,
+  });
+
+  final String icon;
+  final String title;
+  final List<Widget> children;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.all(compact ? 14 : 18),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFBFCFF),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE1E8F4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              _PPDeskSettingIconBubble(
+                icon: icon,
+                color: const Color(0xFF2D6BFF),
+                compact: compact,
+              ),
+              SizedBox(width: compact ? 10 : 12),
+              Text(title,
+                  style: TextStyle(
+                      fontSize: compact ? 16 : 18,
+                      fontWeight: FontWeight.w900,
+                      color: const Color(0xFF101828))),
+            ],
+          ),
+          SizedBox(height: compact ? 10 : 14),
+          for (var i = 0; i < children.length; i++) ...[
+            children[i],
+            if (i != children.length - 1)
+              const Divider(height: 1, color: Color(0xFFE8EEF8)),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _PPDeskAccountPanel extends StatelessWidget {
+  const _PPDeskAccountPanel({
+    required this.compact,
+    required this.displayName,
+    required this.handle,
+    required this.signedIn,
+  });
+
+  final bool compact;
+  final String displayName;
+  final String handle;
+  final bool signedIn;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: EdgeInsets.only(bottom: compact ? 10 : 12),
+      padding: EdgeInsets.all(compact ? 14 : 18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE1E8F4)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: compact ? 50 : 58,
+            height: compact ? 50 : 58,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: const LinearGradient(
+                colors: [Color(0xFFEAF0FF), Color(0xFFDDE8FF)],
+              ),
+              border: Border.all(color: const Color(0xFFD7E2F8)),
+            ),
+            child: Text('皮',
+                style: TextStyle(
+                    fontSize: compact ? 23 : 27,
+                    color: const Color(0xFF2D6BFF),
+                    fontWeight: FontWeight.w900)),
+          ),
+          SizedBox(width: compact ? 12 : 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(displayName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              fontSize: compact ? 17 : 20,
+                              color: const Color(0xFF101828),
+                              fontWeight: FontWeight.w900)),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: signedIn
+                            ? const Color(0xFFE6F8EE)
+                            : const Color(0xFFF2F5FA),
+                        borderRadius: BorderRadius.circular(7),
+                      ),
+                      child: Text(signedIn ? '已登录' : '本地',
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: signedIn
+                                  ? const Color(0xFF18A957)
+                                  : const Color(0xFF66738A),
+                              fontWeight: FontWeight.w800)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                SelectionArea(
+                  child: Text(handle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          fontSize: compact ? 13 : 14,
+                          color: const Color(0xFF66738A),
+                          fontWeight: FontWeight.w600)),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PPDeskSettingInfoRow extends StatelessWidget {
+  const _PPDeskSettingInfoRow({
+    required this.icon,
+    required this.title,
+    required this.value,
+    required this.compact,
+  });
+
+  final String icon;
+  final String title;
+  final String value;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return _PPDeskSettingBaseRow(
+      compact: compact,
+      icon: icon,
+      title: title,
+      subtitle: value,
+      trailing: Text(value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+              fontSize: compact ? 12 : 13,
+              color: const Color(0xFF66738A),
+              fontWeight: FontWeight.w800)),
+    );
+  }
+}
+
+class _PPDeskSettingActionRow extends StatefulWidget {
+  const _PPDeskSettingActionRow({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.compact,
+    required this.onTap,
+    this.danger = false,
+  });
+
+  final String icon;
+  final String title;
+  final String subtitle;
+  final bool compact;
+  final FutureOr<void> Function() onTap;
+  final bool danger;
+
+  @override
+  State<_PPDeskSettingActionRow> createState() =>
+      _PPDeskSettingActionRowState();
+}
+
+class _PPDeskSettingActionRowState extends State<_PPDeskSettingActionRow> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final color =
+        widget.danger ? const Color(0xFFE5484D) : const Color(0xFF2D6BFF);
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: InkWell(
+        onTap: () async => widget.onTap(),
+        borderRadius: BorderRadius.circular(10),
+        hoverColor: Colors.transparent,
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        focusColor: Colors.transparent,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          color: _hover ? const Color(0xFFF7FAFF) : Colors.transparent,
+          child: _PPDeskSettingBaseRow(
+            compact: widget.compact,
+            icon: widget.icon,
+            iconColor: color,
+            title: widget.title,
+            subtitle: widget.subtitle,
+            titleColor: widget.danger ? color : const Color(0xFF101828),
+            trailing: SvgPicture.asset(
+              'assets/ppdesk_chevron_right.svg',
+              width: 18,
+              height: 18,
+              colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PPDeskSettingSelectRow extends StatefulWidget {
+  const _PPDeskSettingSelectRow({
+    required this.icon,
+    required this.title,
+    required this.value,
+    required this.subtitle,
+    required this.compact,
+    required this.onTap,
+    this.disabled = false,
+  });
+
+  final String icon;
+  final String title;
+  final String value;
+  final String subtitle;
+  final bool compact;
+  final FutureOr<void> Function() onTap;
+  final bool disabled;
+
+  @override
+  State<_PPDeskSettingSelectRow> createState() =>
+      _PPDeskSettingSelectRowState();
+}
+
+class _PPDeskSettingSelectRowState extends State<_PPDeskSettingSelectRow> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final color =
+        widget.disabled ? const Color(0xFFA1AEC2) : const Color(0xFF2D6BFF);
+    return MouseRegion(
+      onEnter: (_) {
+        if (!widget.disabled) setState(() => _hover = true);
+      },
+      onExit: (_) {
+        if (!widget.disabled) setState(() => _hover = false);
+      },
+      child: InkWell(
+        onTap: widget.disabled ? null : () async => widget.onTap(),
+        borderRadius: BorderRadius.circular(10),
+        hoverColor: Colors.transparent,
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        focusColor: Colors.transparent,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          color: _hover ? const Color(0xFFF7FAFF) : Colors.transparent,
+          child: _PPDeskSettingBaseRow(
+            compact: widget.compact,
+            icon: widget.icon,
+            iconColor: color,
+            title: widget.title,
+            subtitle: widget.subtitle,
+            titleColor: widget.disabled
+                ? const Color(0xFF98A6BA)
+                : const Color(0xFF101828),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 160),
+                  child: Text(widget.value,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          fontSize: widget.compact ? 12 : 13,
+                          color: const Color(0xFF66738A),
+                          fontWeight: FontWeight.w800)),
+                ),
+                const SizedBox(width: 8),
+                SvgPicture.asset(
+                  'assets/ppdesk_chevron_right.svg',
+                  width: 18,
+                  height: 18,
+                  colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PPDeskSettingSwitchRow extends StatefulWidget {
+  const _PPDeskSettingSwitchRow({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.compact,
+    required this.onChanged,
+    this.enabled = true,
+  });
+
+  final String icon;
+  final String title;
+  final String subtitle;
+  final bool value;
+  final bool compact;
+  final bool enabled;
+  final Future<void> Function(bool) onChanged;
+
+  @override
+  State<_PPDeskSettingSwitchRow> createState() =>
+      _PPDeskSettingSwitchRowState();
+}
+
+class _PPDeskSettingSwitchRowState extends State<_PPDeskSettingSwitchRow> {
+  late bool _value = widget.value;
+  bool _busy = false;
+
+  @override
+  void didUpdateWidget(covariant _PPDeskSettingSwitchRow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.value != widget.value) {
+      _value = widget.value;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final active = _value && widget.enabled;
+    return InkWell(
+      onTap: widget.enabled && !_busy ? _toggle : null,
+      borderRadius: BorderRadius.circular(10),
+      hoverColor: Colors.transparent,
+      splashColor: Colors.transparent,
+      highlightColor: Colors.transparent,
+      focusColor: Colors.transparent,
+      child: _PPDeskSettingBaseRow(
+        compact: widget.compact,
+        icon: widget.icon,
+        iconColor:
+            widget.enabled ? const Color(0xFF2D6BFF) : const Color(0xFFA1AEC2),
+        title: widget.title,
+        subtitle: widget.subtitle,
+        titleColor:
+            widget.enabled ? const Color(0xFF101828) : const Color(0xFF98A6BA),
+        trailing: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          width: widget.compact ? 42 : 48,
+          height: widget.compact ? 24 : 28,
+          padding: const EdgeInsets.all(3),
+          decoration: BoxDecoration(
+            color: active ? const Color(0xFF2D6BFF) : const Color(0xFFD4DCE8),
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: AnimatedAlign(
+            duration: const Duration(milliseconds: 150),
+            alignment: active ? Alignment.centerRight : Alignment.centerLeft,
+            child: Container(
+              width: widget.compact ? 18 : 22,
+              height: widget.compact ? 18 : 22,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: .12),
+                    blurRadius: 5,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _toggle() async {
+    final next = !_value;
+    setState(() {
+      _value = next;
+      _busy = true;
+    });
+    try {
+      await widget.onChanged(next);
+    } catch (e) {
+      showToast('$e');
+      if (mounted) setState(() => _value = !next);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+}
+
+class _PPDeskSettingBaseRow extends StatelessWidget {
+  const _PPDeskSettingBaseRow({
+    required this.compact,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.trailing,
+    this.iconColor = const Color(0xFF2D6BFF),
+    this.titleColor = const Color(0xFF101828),
+  });
+
+  final bool compact;
+  final String icon;
+  final String title;
+  final String subtitle;
+  final Widget trailing;
+  final Color iconColor;
+  final Color titleColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: compact ? 10 : 12),
+      child: Row(
+        children: [
+          _PPDeskSettingIconBubble(
+            icon: icon,
+            color: iconColor,
+            compact: compact,
+          ),
+          SizedBox(width: compact ? 12 : 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        fontSize: compact ? 14 : 15,
+                        color: titleColor,
+                        fontWeight: FontWeight.w800)),
+                const SizedBox(height: 4),
+                Text(subtitle,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        fontSize: compact ? 12 : 13,
+                        color: const Color(0xFF66738A))),
+              ],
+            ),
+          ),
+          SizedBox(width: compact ? 10 : 14),
+          trailing,
+        ],
+      ),
+    );
+  }
+}
+
+class _PPDeskSettingIconBubble extends StatelessWidget {
+  const _PPDeskSettingIconBubble({
+    required this.icon,
+    required this.color,
+    required this.compact,
+  });
+
+  final String icon;
+  final Color color;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: compact ? 36 : 40,
+      height: compact ? 36 : 40,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: .10),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: SvgPicture.asset(
+        'assets/$icon.svg',
+        width: compact ? 18 : 20,
+        height: compact ? 18 : 20,
+        colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
       ),
     );
   }
@@ -3698,6 +5005,10 @@ class _PPDeskGroupItemState extends State<_PPDeskGroupItem> {
       child: InkWell(
         onTap: widget.onTap,
         borderRadius: BorderRadius.circular(9),
+        hoverColor: Colors.transparent,
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        focusColor: Colors.transparent,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
           height: widget.compact ? 38 : 44,
@@ -3778,6 +5089,10 @@ class _PPDeskToolCardState extends State<_PPDeskToolCard> {
       child: InkWell(
         onTap: widget.tool.onTap,
         borderRadius: BorderRadius.circular(14),
+        hoverColor: Colors.transparent,
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        focusColor: Colors.transparent,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 140),
           padding: EdgeInsets.all(widget.compact ? 18 : 24),
@@ -3873,6 +5188,10 @@ class _PPDeskRecentToolCardState extends State<_PPDeskRecentToolCard> {
       child: InkWell(
         onTap: widget.tool.onTap,
         borderRadius: BorderRadius.circular(10),
+        hoverColor: Colors.transparent,
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        focusColor: Colors.transparent,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
           padding: EdgeInsets.all(widget.compact ? 10 : 12),
@@ -3947,6 +5266,10 @@ class _PPDeskHelpActionState extends State<_PPDeskHelpAction> {
       child: InkWell(
         onTap: widget.onTap,
         borderRadius: BorderRadius.circular(8),
+        hoverColor: Colors.transparent,
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        focusColor: Colors.transparent,
         child: Row(
           children: [
             SvgPicture.asset('assets/${widget.icon}.svg',
@@ -3998,6 +5321,10 @@ class _PPDeskActionTileState extends State<_PPDeskActionTile> {
       child: InkWell(
         onTap: widget.onTap,
         borderRadius: BorderRadius.circular(12),
+        hoverColor: Colors.transparent,
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        focusColor: Colors.transparent,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 140),
           height: widget.compact ? 44 : 62,
@@ -4210,6 +5537,10 @@ class _PPDeskRecentRowState extends State<_PPDeskRecentRow> {
       child: InkWell(
         onTap: widget.onConnect,
         borderRadius: BorderRadius.circular(10),
+        hoverColor: Colors.transparent,
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        focusColor: Colors.transparent,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
           height: height,
@@ -4374,6 +5705,10 @@ class _PPDeskSessionRowState extends State<_PPDeskSessionRow> {
       onExit: (_) => setState(() => _hover = false),
       child: InkWell(
         onTap: widget.onOpen,
+        hoverColor: Colors.transparent,
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        focusColor: Colors.transparent,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
           height: rowHeight,
@@ -4619,6 +5954,10 @@ class _PPDeskDeviceRowState extends State<_PPDeskDeviceRow> {
       onExit: (_) => setState(() => _hover = false),
       child: InkWell(
         onTap: widget.onConnect,
+        hoverColor: Colors.transparent,
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        focusColor: Colors.transparent,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
           height: rowHeight,
@@ -4816,6 +6155,10 @@ class _PPDeskIconButtonState extends State<_PPDeskIconButton> {
         child: InkWell(
           onTap: widget.onTap,
           borderRadius: BorderRadius.circular(9),
+          hoverColor: Colors.transparent,
+          splashColor: Colors.transparent,
+          highlightColor: Colors.transparent,
+          focusColor: Colors.transparent,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 140),
             width: 34,
