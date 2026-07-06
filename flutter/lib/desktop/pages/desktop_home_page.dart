@@ -62,9 +62,16 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   final _ppDeskIdController = IDTextEditingController();
   final _ppDeskIdFocusNode = FocusNode();
   final _ppDeskTextController = TextEditingController();
+  final _ppDeskDeviceSearchController = TextEditingController();
+  final _ppDeskDeviceSearchFocusNode = FocusNode();
   final _ppDeskAllPeersLoader = AllPeersLoader();
   final RxBool _ppDeskIdFocused = false.obs;
   Iterable<Peer> _ppDeskAutocompleteOpts = const [];
+  int _ppDeskPage = 0;
+  String _ppDeskDeviceSearch = '';
+  String _ppDeskDeviceGroup = 'all';
+  String _ppDeskDevicePlatform = 'all';
+  String _ppDeskDeviceStatus = 'all';
 
   @override
   Widget build(BuildContext context) {
@@ -160,15 +167,16 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               _PPDeskNavItem(
                 icon: 'ppdesk_home',
                 label: '首页',
-                selected: true,
+                selected: _ppDeskPage == 0,
                 compact: compact,
-                onTap: () {},
+                onTap: () => setState(() => _ppDeskPage = 0),
               ),
               _PPDeskNavItem(
                 icon: 'ppdesk_device',
                 label: '设备列表',
+                selected: _ppDeskPage == 1,
                 compact: compact,
-                onTap: () => gFFI.peerTabModel.setCurrentTab(0),
+                onTap: () => setState(() => _ppDeskPage = 1),
               ),
               _PPDeskNavItem(
                 icon: 'ppdesk_clock',
@@ -378,9 +386,16 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         final rightPadding = compact ? 28.0 : 44.0;
         final topPadding = compact ? 18.0 : 24.0;
         final blockGap = compact ? 12.0 : 20.0;
+        final padding = EdgeInsets.fromLTRB(
+            horizontalPadding, topPadding, rightPadding, compact ? 20 : 28);
+        if (_ppDeskPage == 1) {
+          return Padding(
+            padding: padding,
+            child: _buildPPDeskDeviceListPage(compact: compact),
+          );
+        }
         return Padding(
-          padding: EdgeInsets.fromLTRB(
-              horizontalPadding, topPadding, rightPadding, compact ? 20 : 28),
+          padding: padding,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -433,7 +448,9 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       children: [
         _PPDeskRoundButton(
             icon: 'ppdesk_search',
-            onTap: () => _ppDeskIdFocusNode.requestFocus()),
+            onTap: () => _ppDeskPage == 1
+                ? _ppDeskDeviceSearchFocusNode.requestFocus()
+                : _ppDeskIdFocusNode.requestFocus()),
         const SizedBox(width: 16),
         Stack(
           clipBehavior: Clip.none,
@@ -469,6 +486,456 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         ),
       ],
     );
+  }
+
+  Widget _buildPPDeskDeviceListPage({required bool compact}) {
+    return AnimatedBuilder(
+      animation: Listenable.merge([
+        gFFI.recentPeersModel,
+        gFFI.favoritePeersModel,
+        gFFI.lanPeersModel,
+      ]),
+      builder: (context, _) {
+        final allDevices = _ppDeskAllDevices();
+        final devices = _ppDeskFilteredDevices(allDevices);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('设备列表',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              fontSize: compact ? 28 : 34,
+                              height: 1.1,
+                              fontWeight: FontWeight.w900,
+                              color: const Color(0xFF101828))),
+                      SizedBox(height: compact ? 6 : 10),
+                      Text('集中管理您的远程设备，随时连接与控制。',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              fontSize: compact ? 13 : 15,
+                              color: const Color(0xFF66738A))),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 18),
+                _buildPPDeskTopBar(),
+              ],
+            ),
+            SizedBox(height: compact ? 16 : 24),
+            _buildPPDeskDeviceFilters(compact: compact),
+            SizedBox(height: compact ? 14 : 22),
+            Expanded(
+              child: Row(
+                children: [
+                  _buildPPDeskGroupPanel(allDevices, compact: compact),
+                  SizedBox(width: compact ? 12 : 18),
+                  Expanded(
+                    child: _buildPPDeskDeviceTable(devices,
+                        total: allDevices.length, compact: compact),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildPPDeskDeviceFilters({required bool compact}) {
+    return Row(
+      children: [
+        Expanded(
+          child: Container(
+            height: compact ? 44 : 52,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFE1E8F4)),
+            ),
+            child: Row(
+              children: [
+                const SizedBox(width: 14),
+                Expanded(
+                  child: TextField(
+                    controller: _ppDeskDeviceSearchController,
+                    focusNode: _ppDeskDeviceSearchFocusNode,
+                    autocorrect: false,
+                    enableSuggestions: false,
+                    style: TextStyle(
+                        fontSize: compact ? 13 : 14,
+                        color: const Color(0xFF101828)),
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      hintText: '搜索设备名称或设备 ID',
+                      hintStyle: TextStyle(color: Color(0xFFA1AEC2)),
+                    ),
+                    onChanged: (value) =>
+                        setState(() => _ppDeskDeviceSearch = value),
+                  ).workaroundFreezeLinuxMint(),
+                ),
+                _ppDeskSvg('ppdesk_search',
+                    color: const Color(0xFF1F2A44), size: compact ? 18 : 20),
+                const SizedBox(width: 14),
+              ],
+            ),
+          ),
+        ),
+        SizedBox(width: compact ? 8 : 12),
+        _PPDeskFilterButton(
+          label: '分组',
+          value: _ppDeskGroupLabel(_ppDeskDeviceGroup),
+          compact: compact,
+          items: const {
+            'all': '全部分组',
+            'ungrouped': '未分组',
+            'favorites': '收藏设备',
+            'online': '在线设备',
+            'lan': '局域网设备',
+          },
+          onChanged: (value) => setState(() => _ppDeskDeviceGroup = value),
+        ),
+        SizedBox(width: compact ? 8 : 12),
+        _PPDeskFilterButton(
+          label: '平台',
+          value: _ppDeskPlatformLabel(_ppDeskDevicePlatform),
+          compact: compact,
+          items: const {
+            'all': '全部平台',
+            'windows': 'Windows',
+            'macos': 'macOS',
+            'linux': 'Linux',
+            'android': 'Android',
+          },
+          onChanged: (value) => setState(() => _ppDeskDevicePlatform = value),
+        ),
+        SizedBox(width: compact ? 8 : 12),
+        _PPDeskFilterButton(
+          label: '状态',
+          value: _ppDeskStatusLabel(_ppDeskDeviceStatus),
+          compact: compact,
+          items: const {
+            'all': '全部状态',
+            'online': '在线',
+            'offline': '离线',
+          },
+          onChanged: (value) => setState(() => _ppDeskDeviceStatus = value),
+        ),
+        SizedBox(width: compact ? 10 : 14),
+        _PPDeskPrimaryButton(
+          label: '添加设备',
+          compact: compact,
+          icon: 'ppdesk_plus',
+          onTap: () => showToast('请先连接设备，再在查看全部中加入地址簿'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPPDeskGroupPanel(List<Peer> allDevices,
+      {required bool compact}) {
+    final favoriteIds = gFFI.favoritePeersModel.peers.map((p) => p.id).toSet();
+    final lanIds = gFFI.lanPeersModel.peers.map((p) => p.id).toSet();
+    final groups = [
+      ('all', '全部设备', allDevices.length, 'ppdesk_device'),
+      (
+        'ungrouped',
+        '未分组',
+        allDevices.where((p) => p.device_group_name.isEmpty).length,
+        'ppdesk_folder'
+      ),
+      ('favorites', '收藏设备', favoriteIds.length, 'ppdesk_star'),
+      (
+        'online',
+        '在线设备',
+        allDevices.where((p) => p.online).length,
+        'ppdesk_clock'
+      ),
+      ('lan', '局域网设备', lanIds.length, 'ppdesk_folder'),
+    ];
+    return Container(
+      width: compact ? 168 : 220,
+      padding: EdgeInsets.all(compact ? 12 : 16),
+      decoration: _ppDeskCardDecoration(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: Text('分组管理',
+                    style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF101828))),
+              ),
+              _ppDeskSvg('ppdesk_plus',
+                  color: const Color(0xFF1F2A44), size: 18),
+            ],
+          ),
+          SizedBox(height: compact ? 14 : 22),
+          ...groups.map((item) => _PPDeskGroupItem(
+                icon: item.$4,
+                label: item.$2,
+                count: item.$3,
+                selected: _ppDeskDeviceGroup == item.$1,
+                compact: compact,
+                onTap: () => setState(() => _ppDeskDeviceGroup = item.$1),
+              )),
+          const Spacer(),
+          Container(height: 1, color: const Color(0xFFE1E8F4)),
+          SizedBox(height: compact ? 12 : 16),
+          InkWell(
+            onTap: () => showToast('请在查看全部中管理回收站'),
+            borderRadius: BorderRadius.circular(8),
+            child: Row(
+              children: [
+                SvgPicture.asset('assets/trash.svg',
+                    width: 18,
+                    height: 18,
+                    colorFilter: const ColorFilter.mode(
+                        Color(0xFF7C8AA5), BlendMode.srcIn)),
+                const SizedBox(width: 8),
+                const Text('回收站',
+                    style: TextStyle(fontSize: 13, color: Color(0xFF66738A))),
+              ],
+            ).paddingSymmetric(vertical: 6),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPPDeskDeviceTable(List<Peer> devices,
+      {required int total, required bool compact}) {
+    return Container(
+      decoration: _ppDeskCardDecoration(),
+      child: Column(
+        children: [
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+                compact ? 14 : 20, compact ? 12 : 16, compact ? 14 : 20, 10),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text('共 ${devices.length} 台设备',
+                      style: const TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFF66738A),
+                          fontWeight: FontWeight.w700)),
+                ),
+                _PPDeskSmallButton(
+                  icon: 'ppdesk_refresh',
+                  label: '刷新',
+                  compact: compact,
+                  onTap: () {
+                    bind.mainLoadRecentPeers();
+                    bind.mainLoadFavPeers();
+                    bind.mainLoadLanPeers();
+                  },
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1, color: Color(0xFFE8EEF8)),
+          _buildPPDeskDeviceTableHeader(compact: compact),
+          const Divider(height: 1, color: Color(0xFFE8EEF8)),
+          Expanded(
+            child: devices.isEmpty
+                ? const Center(
+                    child: Text('暂无匹配设备',
+                        style:
+                            TextStyle(fontSize: 14, color: Color(0xFF7C8AA5))))
+                : ListView.separated(
+                    padding: EdgeInsets.zero,
+                    itemCount: devices.length,
+                    separatorBuilder: (_, __) =>
+                        const Divider(height: 1, color: Color(0xFFE8EEF8)),
+                    itemBuilder: (_, index) => _PPDeskDeviceRow(
+                      peer: devices[index],
+                      compact: compact,
+                      favorite: gFFI.favoritePeersModel.peers
+                          .any((p) => p.id == devices[index].id),
+                      onConnect: () {
+                        _ppDeskIdController.id = devices[index].id;
+                        _ppDeskConnect();
+                      },
+                      onAction: (value) {
+                        if (value == 'connect') {
+                          _ppDeskIdController.id = devices[index].id;
+                          _ppDeskConnect();
+                        } else if (value == 'file') {
+                          _ppDeskIdController.id = devices[index].id;
+                          _ppDeskConnect(isFileTransfer: true);
+                        } else {
+                          showToast('请在查看全部中管理设备');
+                        }
+                      },
+                    ),
+                  ),
+          ),
+          Container(
+            height: compact ? 42 : 54,
+            padding: EdgeInsets.symmetric(horizontal: compact ? 14 : 20),
+            decoration: const BoxDecoration(
+              border: Border(top: BorderSide(color: Color(0xFFE8EEF8))),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Text('共 $total 条',
+                    style: const TextStyle(
+                        fontSize: 13, color: Color(0xFF66738A))),
+                const SizedBox(width: 18),
+                Text('${devices.length} 条/页',
+                    style: const TextStyle(
+                        fontSize: 13, color: Color(0xFF66738A))),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPPDeskDeviceTableHeader({required bool compact}) {
+    final style = TextStyle(
+        fontSize: compact ? 12 : 13,
+        color: const Color(0xFF66738A),
+        fontWeight: FontWeight.w800);
+    return Container(
+      height: compact ? 42 : 54,
+      padding: EdgeInsets.symmetric(horizontal: compact ? 14 : 20),
+      color: const Color(0xFFFBFCFF),
+      child: Row(
+        children: [
+          Expanded(flex: 4, child: Text('设备名称', style: style)),
+          Expanded(flex: 3, child: Text('设备 ID', style: style)),
+          Expanded(flex: 2, child: Text('平台', style: style)),
+          Expanded(flex: 2, child: Text('标签', style: style)),
+          Expanded(flex: 2, child: Text('状态', style: style)),
+          SizedBox(width: compact ? 52 : 70, child: Text('操作', style: style)),
+        ],
+      ),
+    );
+  }
+
+  List<Peer> _ppDeskAllDevices() {
+    final byId = <String, Peer>{};
+    for (final peer in [
+      ...gFFI.recentPeersModel.peers,
+      ...gFFI.favoritePeersModel.peers,
+      ...gFFI.lanPeersModel.peers,
+    ]) {
+      if (peer.id.isNotEmpty) {
+        byId[peer.id] = peer;
+      }
+    }
+    return byId.values.toList();
+  }
+
+  List<Peer> _ppDeskFilteredDevices(List<Peer> devices) {
+    final favoriteIds = gFFI.favoritePeersModel.peers.map((p) => p.id).toSet();
+    final lanIds = gFFI.lanPeersModel.peers.map((p) => p.id).toSet();
+    final search = _ppDeskDeviceSearch.trim().toLowerCase().replaceAll(' ', '');
+    return devices.where((peer) {
+      if (_ppDeskDeviceGroup == 'ungrouped' &&
+          peer.device_group_name.isNotEmpty) {
+        return false;
+      }
+      if (_ppDeskDeviceGroup == 'favorites' && !favoriteIds.contains(peer.id)) {
+        return false;
+      }
+      if (_ppDeskDeviceGroup == 'online' && !peer.online) {
+        return false;
+      }
+      if (_ppDeskDeviceGroup == 'lan' && !lanIds.contains(peer.id)) {
+        return false;
+      }
+      if (_ppDeskDeviceStatus == 'online' && !peer.online) {
+        return false;
+      }
+      if (_ppDeskDeviceStatus == 'offline' && peer.online) {
+        return false;
+      }
+      if (_ppDeskDevicePlatform != 'all' &&
+          !_ppDeskPlatformMatches(peer.platform, _ppDeskDevicePlatform)) {
+        return false;
+      }
+      if (search.isEmpty) {
+        return true;
+      }
+      final name = _ppDeskPeerName(peer).toLowerCase();
+      final id = peer.id.toLowerCase().replaceAll(' ', '');
+      return name.contains(search) || id.contains(search);
+    }).toList();
+  }
+
+  bool _ppDeskPlatformMatches(String platform, String filter) {
+    final p = platform.toLowerCase();
+    return switch (filter) {
+      'windows' => p.contains('win'),
+      'macos' => p.contains('mac'),
+      'linux' => p.contains('linux'),
+      'android' => p.contains('android'),
+      _ => true,
+    };
+  }
+
+  String _ppDeskGroupLabel(String value) {
+    return const {
+          'all': '全部分组',
+          'ungrouped': '未分组',
+          'favorites': '收藏设备',
+          'online': '在线设备',
+          'lan': '局域网设备',
+        }[value] ??
+        '全部分组';
+  }
+
+  String _ppDeskPlatformLabel(String value) {
+    return const {
+          'all': '全部平台',
+          'windows': 'Windows',
+          'macos': 'macOS',
+          'linux': 'Linux',
+          'android': 'Android',
+        }[value] ??
+        '全部平台';
+  }
+
+  String _ppDeskStatusLabel(String value) {
+    return const {
+          'all': '全部状态',
+          'online': '在线',
+          'offline': '离线',
+        }[value] ??
+        '全部状态';
+  }
+
+  String _ppDeskPeerName(Peer peer) {
+    if (peer.alias.isNotEmpty) {
+      return peer.alias;
+    }
+    if (peer.username.isNotEmpty && peer.hostname.isNotEmpty) {
+      return '${peer.username}@${peer.hostname}';
+    }
+    if (peer.hostname.isNotEmpty) {
+      return peer.hostname;
+    }
+    if (peer.username.isNotEmpty) {
+      return peer.username;
+    }
+    return formatID(peer.id);
   }
 
   Widget _buildPPDeskQuickConnect(BuildContext context,
@@ -1757,6 +2224,8 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     _ppDeskIdFocusNode.dispose();
     _ppDeskIdController.dispose();
     _ppDeskTextController.dispose();
+    _ppDeskDeviceSearchFocusNode.dispose();
+    _ppDeskDeviceSearchController.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -1896,11 +2365,13 @@ class _PPDeskPrimaryButton extends StatefulWidget {
     required this.label,
     required this.onTap,
     required this.compact,
+    this.icon,
   });
 
   final String label;
   final VoidCallback onTap;
   final bool compact;
+  final String? icon;
 
   @override
   State<_PPDeskPrimaryButton> createState() => _PPDeskPrimaryButtonState();
@@ -1936,11 +2407,220 @@ class _PPDeskPrimaryButtonState extends State<_PPDeskPrimaryButton> {
               ),
             ],
           ),
-          child: Text(widget.label,
-              style: TextStyle(
-                  color: Colors.white,
-                  fontSize: widget.compact ? 16 : 18,
-                  fontWeight: FontWeight.w800)),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (widget.icon != null) ...[
+                SvgPicture.asset(
+                  'assets/${widget.icon}.svg',
+                  width: widget.compact ? 17 : 20,
+                  height: widget.compact ? 17 : 20,
+                  colorFilter:
+                      const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                ),
+                SizedBox(width: widget.compact ? 8 : 10),
+              ],
+              Text(widget.label,
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: widget.compact ? 16 : 18,
+                      fontWeight: FontWeight.w800)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PPDeskFilterButton extends StatelessWidget {
+  const _PPDeskFilterButton({
+    required this.label,
+    required this.value,
+    required this.items,
+    required this.onChanged,
+    required this.compact,
+  });
+
+  final String label;
+  final String value;
+  final Map<String, String> items;
+  final ValueChanged<String> onChanged;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<String>(
+      tooltip: label,
+      offset: const Offset(0, 8),
+      onSelected: onChanged,
+      itemBuilder: (context) => items.entries
+          .map((item) => PopupMenuItem<String>(
+                value: item.key,
+                child: Text(item.value),
+              ))
+          .toList(),
+      child: Container(
+        height: compact ? 44 : 52,
+        width: compact ? 118 : 148,
+        padding: EdgeInsets.symmetric(horizontal: compact ? 10 : 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xFFE1E8F4)),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text('$label：$value',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      fontSize: compact ? 12 : 13,
+                      color: const Color(0xFF344054),
+                      fontWeight: FontWeight.w600)),
+            ),
+            SvgPicture.asset('assets/ppdesk_chevron_down.svg',
+                width: 16,
+                height: 16,
+                colorFilter:
+                    const ColorFilter.mode(Color(0xFF66738A), BlendMode.srcIn)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PPDeskSmallButton extends StatefulWidget {
+  const _PPDeskSmallButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    required this.compact,
+  });
+
+  final String icon;
+  final String label;
+  final VoidCallback onTap;
+  final bool compact;
+
+  @override
+  State<_PPDeskSmallButton> createState() => _PPDeskSmallButtonState();
+}
+
+class _PPDeskSmallButtonState extends State<_PPDeskSmallButton> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: InkWell(
+        onTap: widget.onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          height: widget.compact ? 30 : 34,
+          padding: EdgeInsets.symmetric(horizontal: widget.compact ? 9 : 12),
+          decoration: BoxDecoration(
+            color: _hover ? const Color(0xFFEAF0FF) : Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: const Color(0xFFE1E8F4)),
+          ),
+          child: Row(
+            children: [
+              SvgPicture.asset('assets/${widget.icon}.svg',
+                  width: 16,
+                  height: 16,
+                  colorFilter: const ColorFilter.mode(
+                      Color(0xFF66738A), BlendMode.srcIn)),
+              const SizedBox(width: 6),
+              Text(widget.label,
+                  style: TextStyle(
+                      fontSize: widget.compact ? 12 : 13,
+                      color: const Color(0xFF66738A),
+                      fontWeight: FontWeight.w700)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PPDeskGroupItem extends StatefulWidget {
+  const _PPDeskGroupItem({
+    required this.icon,
+    required this.label,
+    required this.count,
+    required this.selected,
+    required this.compact,
+    required this.onTap,
+  });
+
+  final String icon;
+  final String label;
+  final int count;
+  final bool selected;
+  final bool compact;
+  final VoidCallback onTap;
+
+  @override
+  State<_PPDeskGroupItem> createState() => _PPDeskGroupItemState();
+}
+
+class _PPDeskGroupItemState extends State<_PPDeskGroupItem> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final active = widget.selected || _hover;
+    final color = active ? const Color(0xFF2D6BFF) : const Color(0xFF66738A);
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: InkWell(
+        onTap: widget.onTap,
+        borderRadius: BorderRadius.circular(9),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          height: widget.compact ? 38 : 44,
+          margin: const EdgeInsets.only(bottom: 6),
+          padding: EdgeInsets.symmetric(horizontal: widget.compact ? 10 : 12),
+          decoration: BoxDecoration(
+            color: active ? const Color(0xFFEAF0FF) : Colors.transparent,
+            borderRadius: BorderRadius.circular(9),
+          ),
+          child: Row(
+            children: [
+              SvgPicture.asset('assets/${widget.icon}.svg',
+                  width: 18,
+                  height: 18,
+                  colorFilter: ColorFilter.mode(color, BlendMode.srcIn)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(widget.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        fontSize: widget.compact ? 12 : 13,
+                        color: active
+                            ? const Color(0xFF2D6BFF)
+                            : const Color(0xFF344054),
+                        fontWeight:
+                            active ? FontWeight.w800 : FontWeight.w600)),
+              ),
+              Text('${widget.count}',
+                  style: TextStyle(
+                      fontSize: 12,
+                      color: active
+                          ? const Color(0xFF2D6BFF)
+                          : const Color(0xFF66738A),
+                      fontWeight: FontWeight.w700)),
+            ],
+          ),
         ),
       ),
     );
@@ -2274,6 +2954,213 @@ class _PPDeskRecentRowState extends State<_PPDeskRecentRow> {
         ),
       ),
     );
+  }
+
+  String _peerName(Peer peer) {
+    if (peer.alias.isNotEmpty) {
+      return peer.alias;
+    }
+    if (peer.username.isNotEmpty && peer.hostname.isNotEmpty) {
+      return '${peer.username}@${peer.hostname}';
+    }
+    if (peer.hostname.isNotEmpty) {
+      return peer.hostname;
+    }
+    if (peer.username.isNotEmpty) {
+      return peer.username;
+    }
+    return formatID(peer.id);
+  }
+}
+
+class _PPDeskDeviceRow extends StatefulWidget {
+  const _PPDeskDeviceRow({
+    required this.peer,
+    required this.compact,
+    required this.favorite,
+    required this.onConnect,
+    required this.onAction,
+  });
+
+  final Peer peer;
+  final bool compact;
+  final bool favorite;
+  final VoidCallback onConnect;
+  final ValueChanged<String> onAction;
+
+  @override
+  State<_PPDeskDeviceRow> createState() => _PPDeskDeviceRowState();
+}
+
+class _PPDeskDeviceRowState extends State<_PPDeskDeviceRow> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final rowHeight = widget.compact ? 58.0 : 72.0;
+    final name = _peerName(widget.peer);
+    final tag = _firstTag(widget.peer);
+    final online = widget.peer.online;
+    final mutedStyle = TextStyle(
+        fontSize: widget.compact ? 12 : 13,
+        color: const Color(0xFF66738A),
+        fontWeight: FontWeight.w500);
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: InkWell(
+        onTap: widget.onConnect,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          height: rowHeight,
+          padding: EdgeInsets.symmetric(horizontal: widget.compact ? 14 : 20),
+          color: _hover ? const Color(0xFFF8FAFF) : Colors.white,
+          child: Row(
+            children: [
+              Expanded(
+                flex: 4,
+                child: Row(
+                  children: [
+                    Container(
+                      width: widget.compact ? 34 : 40,
+                      height: widget.compact ? 34 : 40,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEAF0FF),
+                        borderRadius: BorderRadius.circular(9),
+                      ),
+                      child: SvgPicture.asset('assets/ppdesk_device.svg',
+                          width: widget.compact ? 18 : 22,
+                          height: widget.compact ? 18 : 22,
+                          colorFilter: const ColorFilter.mode(
+                              Color(0xFF2D6BFF), BlendMode.srcIn)),
+                    ),
+                    SizedBox(width: widget.compact ? 8 : 12),
+                    Expanded(
+                      child: Text(name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              fontSize: widget.compact ? 13 : 14,
+                              color: const Color(0xFF101828),
+                              fontWeight: FontWeight.w800)),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                flex: 3,
+                child: Text(formatID(widget.peer.id),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: mutedStyle),
+              ),
+              Expanded(
+                flex: 2,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: getPlatformImage(widget.peer.platform,
+                      size: widget.compact ? 18 : 20),
+                ),
+              ),
+              Expanded(
+                flex: 2,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: tag.isEmpty
+                      ? Text('-', style: mutedStyle)
+                      : Container(
+                          padding: EdgeInsets.symmetric(
+                              horizontal: widget.compact ? 6 : 8,
+                              vertical: widget.compact ? 3 : 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEAF0FF),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(tag,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                  fontSize: widget.compact ? 11 : 12,
+                                  color: const Color(0xFF2D6BFF),
+                                  fontWeight: FontWeight.w700)),
+                        ),
+                ),
+              ),
+              Expanded(
+                flex: 2,
+                child: Row(
+                  children: [
+                    Container(
+                      width: 7,
+                      height: 7,
+                      decoration: BoxDecoration(
+                        color: online
+                            ? const Color(0xFF20C66B)
+                            : const Color(0xFF8A98AD),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 7),
+                    Text(online ? '在线' : '离线',
+                        overflow: TextOverflow.ellipsis, style: mutedStyle),
+                  ],
+                ),
+              ),
+              SizedBox(
+                width: widget.compact ? 52 : 70,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Tooltip(
+                      message: widget.favorite ? '已收藏' : '收藏',
+                      child: SvgPicture.asset('assets/ppdesk_star.svg',
+                          width: 18,
+                          height: 18,
+                          colorFilter: ColorFilter.mode(
+                              widget.favorite
+                                  ? const Color(0xFF2D6BFF)
+                                  : const Color(0xFF8A98AD),
+                              BlendMode.srcIn)),
+                    ),
+                    PopupMenuButton<String>(
+                      tooltip: translate('More'),
+                      offset: const Offset(0, 8),
+                      onSelected: widget.onAction,
+                      itemBuilder: (context) => [
+                        PopupMenuItem(
+                            value: 'connect',
+                            child: Text(translate('Connect'))),
+                        PopupMenuItem(
+                            value: 'file',
+                            child: Text(translate('Transfer file'))),
+                        const PopupMenuItem(value: 'manage', child: Text('管理')),
+                      ],
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 8),
+                        child: SvgPicture.asset('assets/ppdesk_more.svg',
+                            width: 18,
+                            height: 18,
+                            colorFilter: const ColorFilter.mode(
+                                Color(0xFF66738A), BlendMode.srcIn)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _firstTag(Peer peer) {
+    if (peer.tags.isEmpty) {
+      return '';
+    }
+    return '${peer.tags.first}';
   }
 
   String _peerName(Peer peer) {
