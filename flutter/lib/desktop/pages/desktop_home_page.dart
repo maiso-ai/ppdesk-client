@@ -74,6 +74,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   final _ppDeskSessionSearchFocusNode = FocusNode();
   final Map<String, String> _ppDeskLangLabels = {};
   final _ppDeskAllPeersLoader = AllPeersLoader();
+  static const String _ppDeskPeerSourceListenerKey = 'ppdesk_desktop_home_page';
   final RxBool _ppDeskIdFocused = false.obs;
   Iterable<Peer> _ppDeskAutocompleteOpts = const [];
   int _ppDeskPage = 0;
@@ -84,7 +85,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   String _ppDeskSessionSearch = '';
   String _ppDeskSessionType = 'all';
   String _ppDeskSessionTime = 'all';
-  SettingsTabKey _ppDeskSettingTab = SettingsTabKey.account;
+  SettingsTabKey _ppDeskSettingTab = SettingsTabKey.general;
   bool _ppDeskShowStartup = true;
 
   @override
@@ -391,67 +392,82 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   }
 
   Widget _buildPPDeskUserTile(BuildContext context, {required bool compact}) {
-    final rawUserName = gFFI.userModel.userName.toString();
-    final userName = rawUserName.isEmpty ? '皮皮用户' : rawUserName;
     final avatarSize = compact ? 46.0 : 54.0;
-    return Row(
-      children: [
-        Stack(
-          children: [
-            Container(
-              width: avatarSize,
-              height: avatarSize,
-              alignment: Alignment.center,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                    colors: [Color(0xFF2D6BFF), Color(0xFF6B2BFF)]),
+    return Obx(() {
+      final userName = gFFI.userModel.userName.value.trim();
+      final loggedIn = userName.isNotEmpty;
+      final displayName =
+          loggedIn ? gFFI.userModel.displayNameOrUserName : '未登录';
+      final subtitle = loggedIn ? '@$userName' : '点击登录账号';
+      return MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => setState(() => _ppDeskPage = 5),
+          child: Row(
+            children: [
+              Stack(
+                children: [
+                  Container(
+                    width: avatarSize,
+                    height: avatarSize,
+                    alignment: Alignment.center,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                          colors: [Color(0xFF2D6BFF), Color(0xFF6B2BFF)]),
+                    ),
+                    child: const Text('皮',
+                        style: TextStyle(
+                            fontSize: 22,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800)),
+                  ),
+                  Positioned(
+                    right: 1,
+                    bottom: 1,
+                    child: Container(
+                      width: 12,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: loggedIn
+                            ? const Color(0xFF20D67B)
+                            : const Color(0xFF98A2B3),
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              child: const Text('皮',
-                  style: TextStyle(
-                      fontSize: 22,
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800)),
-            ),
-            Positioned(
-              right: 1,
-              bottom: 1,
-              child: Container(
-                width: 12,
-                height: 12,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: const Color(0xFF20D67B),
-                  border: Border.all(color: Colors.white, width: 2),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(displayName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF101828))),
+                    const SizedBox(height: 4),
+                    Text(subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontSize: 12, color: Color(0xFF7C8AA5))),
+                  ],
                 ),
               ),
-            ),
-          ],
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(userName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF101828))),
-              const SizedBox(height: 4),
-              const Text('user@example.com',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 12, color: Color(0xFF7C8AA5))),
+              _ppDeskSvg('ppdesk_chevron_right',
+                  color: const Color(0xFF7C8AA5), size: 18),
             ],
           ),
         ),
-        _ppDeskSvg('ppdesk_chevron_down',
-            color: const Color(0xFF7C8AA5), size: 18),
-      ],
-    );
+      );
+    });
   }
 
   Widget _buildPPDeskMain(BuildContext context, bool isOutgoingOnly) {
@@ -487,6 +503,12 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           return Padding(
             padding: padding,
             child: _buildPPDeskToolboxPage(compact: compact),
+          );
+        }
+        if (_ppDeskPage == 5) {
+          return Padding(
+            padding: padding,
+            child: _buildPPDeskAccountPage(compact: compact),
           );
         }
         return Padding(
@@ -532,6 +554,40 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           ),
         );
       },
+    );
+  }
+
+  Widget _buildPPDeskAccountPage({required bool compact}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('账号信息',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+                fontSize: compact ? 28 : 34,
+                height: 1.1,
+                fontWeight: FontWeight.w900,
+                color: const Color(0xFF101828))),
+        SizedBox(height: compact ? 6 : 10),
+        Text('管理登录账号、永久密码与认证状态。',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+                fontSize: compact ? 13 : 15, color: const Color(0xFF66738A))),
+        SizedBox(height: compact ? 16 : 24),
+        Expanded(
+          child: Container(
+            width: double.infinity,
+            decoration: _ppDeskCardDecoration(),
+            clipBehavior: Clip.antiAlias,
+            child: SingleChildScrollView(
+              padding: EdgeInsets.all(compact ? 14 : 18),
+              child: _buildPPDeskAccountSettings(compact: compact),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -920,6 +976,8 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       ...gFFI.recentPeersModel.peers,
       ...gFFI.favoritePeersModel.peers,
       ...gFFI.lanPeersModel.peers,
+      ...gFFI.abModel.allPeers(),
+      ...gFFI.groupModel.peers,
     ]) {
       if (peer.id.isNotEmpty) {
         byId[peer.id] = peer;
@@ -1081,7 +1139,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           child: _buildPPDeskSearchField(
             controller: _ppDeskSessionSearchController,
             focusNode: _ppDeskSessionSearchFocusNode,
-            hintText: '搜索设备名称、设备 ID 或会话内容',
+            hintText: '搜索设备名称或设备 ID',
             compact: compact,
             onChanged: (value) => setState(() => _ppDeskSessionSearch = value),
           ),
@@ -1107,9 +1165,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           compact: compact,
           items: const {
             'all': '全部时间',
-            'today': '今天',
-            'yesterday': '昨天',
-            'earlier': '更早',
+            'recent': '最近记录',
           },
           onChanged: (value) => setState(() => _ppDeskSessionTime = value),
         ),
@@ -1118,7 +1174,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           icon: 'ppdesk_download',
           label: '导出记录',
           compact: compact,
-          onTap: () => showToast('接入真实会话日志后可导出记录'),
+          onTap: () => showToast('当前列表来自本机真实最近连接记录'),
         ),
       ],
     );
@@ -1130,14 +1186,12 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       return Container(
         decoration: _ppDeskCardDecoration(),
         alignment: Alignment.center,
-        child: const Text('暂无匹配会话',
+        child: const Text('暂无真实会话记录',
             style: TextStyle(fontSize: 14, color: Color(0xFF7C8AA5))),
       );
     }
     const groupLabels = {
-      'today': '今天',
-      'yesterday': '昨天',
-      'earlier': '更早',
+      'recent': '最近记录',
     };
     return ListView(
       padding: EdgeInsets.zero,
@@ -1177,7 +1231,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                       } else if (value == 'connect') {
                         _ppDeskConnect();
                       } else {
-                        showToast('会话详情需接入真实会话日志');
+                        showToast('当前记录来自本机最近连接列表');
                       }
                     },
                   ),
@@ -1249,55 +1303,23 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   }
 
   List<_PPDeskSessionRecord> _ppDeskSessionRecords() {
-    final peers = _ppDeskAllDevices();
-    const times = [
-      '10:24',
-      '09:45',
-      '08:30',
-      '昨天 16:20',
-      '昨天 14:12',
-      '昨天 11:05',
-      '05-10 19:32',
-      '05-08 22:18'
-    ];
-    const durations = [
-      '00:18:36',
-      '00:02:14',
-      '00:45:12',
-      '00:03:58',
-      '00:22:07',
-      '00:15:33',
-      '00:31:08',
-      '01:05:27'
-    ];
-    const files = ['项目说明.pdf', '部署日志.zip', '备份数据.tar'];
-    const sizes = ['12.4 MB', '68.7 MB', '256.3 MB'];
-    const colors = [
-      Color(0xFF2D6BFF),
-      Color(0xFF20C66B),
-      Color(0xFF7C3CFF),
-      Color(0xFFFF9F1C),
-    ];
+    final peers = gFFI.recentPeersModel.peers
+        .where((peer) => peer.id.trim().isNotEmpty)
+        .toList();
     return [
       for (var i = 0; i < peers.length; i++)
         _PPDeskSessionRecord(
           peer: peers[i],
-          type: i % 3 == 1 ? 'file' : 'remote',
-          group: i < 3
-              ? 'today'
-              : i < 6
-                  ? 'yesterday'
-                  : 'earlier',
-          time: times[i % times.length],
-          duration: durations[i % durations.length],
-          status: i % 5 == 4
-              ? 'failed'
-              : i % 3 == 2
-                  ? 'interrupted'
-                  : 'success',
-          fileName: files[i % files.length],
-          fileSize: sizes[i % sizes.length],
-          color: colors[i % colors.length],
+          type: 'remote',
+          group: 'recent',
+          time: '最近记录',
+          duration: '-',
+          status: peers[i].online ? 'online' : 'offline',
+          fileName: '',
+          fileSize: '',
+          color: peers[i].online
+              ? const Color(0xFF20C66B)
+              : const Color(0xFF2D6BFF),
         ),
     ];
   }
@@ -1337,15 +1359,15 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   String _ppDeskSessionTimeLabel(String value) {
     return const {
           'all': '全部时间',
-          'today': '今天',
-          'yesterday': '昨天',
-          'earlier': '更早',
+          'recent': '最近记录',
         }[value] ??
         '全部时间';
   }
 
   Widget _buildPPDeskSettingsPage({required bool compact}) {
-    final tabs = DesktopSettingPage.tabKeys;
+    final tabs = DesktopSettingPage.tabKeys
+        .where((tab) => tab != SettingsTabKey.account)
+        .toList(growable: false);
     final selected =
         tabs.contains(_ppDeskSettingTab) ? _ppDeskSettingTab : tabs.first;
     return Column(
@@ -1367,7 +1389,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                           fontWeight: FontWeight.w900,
                           color: const Color(0xFF101828))),
                   SizedBox(height: compact ? 6 : 10),
-                  Text('管理账号、安全、通知与远程控制相关设置。',
+                  Text('管理安全、网络、显示与远程控制相关设置。',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -1452,11 +1474,11 @@ class _DesktopHomePageState extends State<DesktopHomePage>
 
   Widget _buildPPDeskAccountSettings({required bool compact}) {
     return Obx(() {
-      final loggedIn = gFFI.userModel.userName.value.isNotEmpty;
-      final userName = loggedIn ? gFFI.userModel.userName.value : 'admin';
+      final userName = gFFI.userModel.userName.value.trim();
+      final loggedIn = userName.isNotEmpty;
       final displayName =
-          loggedIn ? gFFI.userModel.displayNameOrUserName : 'admin';
-      final handle = loggedIn ? '@${gFFI.userModel.userName.value}' : '本地管理员';
+          loggedIn ? gFFI.userModel.displayNameOrUserName : '未登录';
+      final handle = loggedIn ? '@$userName' : '登录后同步设备、地址簿与审计记录';
       return _PPDeskSettingsSection(
         icon: 'ppdesk_user',
         title: '账号',
@@ -1490,7 +1512,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           _PPDeskSettingInfoRow(
             icon: 'ppdesk_shield',
             title: '认证状态',
-            value: loggedIn ? '已登录' : '本地模式',
+            value: loggedIn ? '已登录' : '未登录',
             compact: compact,
           ),
         ],
@@ -3745,6 +3767,10 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   void initState() {
     super.initState();
     _ppDeskAllPeersLoader.init(setState);
+    gFFI.abModel.addPeerUpdateListener(
+        _ppDeskPeerSourceListenerKey, _onPPDeskPeerSourcesChanged);
+    gFFI.groupModel.addPeerUpdateListener(
+        _ppDeskPeerSourceListenerKey, _onPPDeskPeerSourcesChanged);
     _ppDeskIdFocusNode.addListener(_onPPDeskIdFocusChanged);
     Timer(const Duration(milliseconds: 950), () {
       if (mounted) setState(() => _ppDeskShowStartup = false);
@@ -3943,6 +3969,8 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     Get.delete<RxBool>(tag: 'stop-service');
     _updateTimer?.cancel();
     _ppDeskAllPeersLoader.clear();
+    gFFI.abModel.removePeerUpdateListener(_ppDeskPeerSourceListenerKey);
+    gFFI.groupModel.removePeerUpdateListener(_ppDeskPeerSourceListenerKey);
     _ppDeskIdFocusNode.removeListener(_onPPDeskIdFocusChanged);
     _ppDeskIdFocusNode.dispose();
     _ppDeskIdController.dispose();
@@ -3953,6 +3981,12 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     _ppDeskSessionSearchController.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  void _onPPDeskPeerSourcesChanged() {
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   @override
@@ -4098,22 +4132,16 @@ class _PPDeskAutocompleteRowState extends State<_PPDeskAutocompleteRow> {
 }
 
 class _PPDeskNavItemState extends State<_PPDeskNavItem> {
-  bool _hover = false;
-
   @override
   Widget build(BuildContext context) {
-    final color = (widget.selected || _hover)
-        ? const Color(0xFF2D6BFF)
-        : const Color(0xFF202B3D);
+    final color =
+        widget.selected ? const Color(0xFF2D6BFF) : const Color(0xFF202B3D);
     return MouseRegion(
       cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hover = true),
-      onExit: (_) => setState(() => _hover = false),
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: widget.onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 140),
+        child: Container(
           height: widget.compact ? 52 : 62,
           margin: EdgeInsets.only(bottom: widget.compact ? 8 : 14),
           padding: EdgeInsets.symmetric(horizontal: widget.compact ? 20 : 24),
@@ -4134,9 +4162,8 @@ class _PPDeskNavItemState extends State<_PPDeskNavItem> {
               Text(widget.label,
                   style: TextStyle(
                       fontSize: widget.compact ? 16 : 18,
-                      fontWeight: widget.selected
-                          ? FontWeight.w800
-                          : (_hover ? FontWeight.w700 : FontWeight.w500),
+                      fontWeight:
+                          widget.selected ? FontWeight.w800 : FontWeight.w500,
                       color: color)),
             ],
           ),
@@ -4567,22 +4594,16 @@ class _PPDeskSettingsTabItem extends StatefulWidget {
 }
 
 class _PPDeskSettingsTabItemState extends State<_PPDeskSettingsTabItem> {
-  bool _hover = false;
-
   @override
   Widget build(BuildContext context) {
-    final color = (widget.selected || _hover)
-        ? const Color(0xFF2D6BFF)
-        : const Color(0xFF344054);
+    final color =
+        widget.selected ? const Color(0xFF2D6BFF) : const Color(0xFF344054);
     return MouseRegion(
-      onEnter: (_) => setState(() => _hover = true),
-      onExit: (_) => setState(() => _hover = false),
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: widget.onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 120),
+        child: Container(
           height: widget.compact ? 40 : 46,
           margin: const EdgeInsets.only(bottom: 6),
           padding: EdgeInsets.symmetric(horizontal: widget.compact ? 10 : 12),
@@ -4605,7 +4626,7 @@ class _PPDeskSettingsTabItemState extends State<_PPDeskSettingsTabItem> {
                     style: TextStyle(
                         fontSize: widget.compact ? 13 : 14,
                         color: color,
-                        fontWeight: (widget.selected || _hover)
+                        fontWeight: widget.selected
                             ? FontWeight.w800
                             : FontWeight.w600)),
               ),
@@ -4737,7 +4758,7 @@ class _PPDeskAccountPanel extends StatelessWidget {
                             : const Color(0xFFF2F5FA),
                         borderRadius: BorderRadius.circular(7),
                       ),
-                      child: Text(signedIn ? '已登录' : '本地',
+                      child: Text(signedIn ? '已登录' : '未登录',
                           style: TextStyle(
                               fontSize: 12,
                               color: signedIn
@@ -5142,22 +5163,16 @@ class _PPDeskGroupItem extends StatefulWidget {
 }
 
 class _PPDeskGroupItemState extends State<_PPDeskGroupItem> {
-  bool _hover = false;
-
   @override
   Widget build(BuildContext context) {
-    final color = (widget.selected || _hover)
-        ? const Color(0xFF2D6BFF)
-        : const Color(0xFF66738A);
+    final color =
+        widget.selected ? const Color(0xFF2D6BFF) : const Color(0xFF66738A);
     return MouseRegion(
-      onEnter: (_) => setState(() => _hover = true),
-      onExit: (_) => setState(() => _hover = false),
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: widget.onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 120),
+        child: Container(
           height: widget.compact ? 38 : 44,
           margin: const EdgeInsets.only(bottom: 6),
           padding: EdgeInsets.symmetric(horizontal: widget.compact ? 10 : 12),
@@ -5179,17 +5194,17 @@ class _PPDeskGroupItemState extends State<_PPDeskGroupItem> {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                         fontSize: widget.compact ? 12 : 13,
-                        color: (widget.selected || _hover)
+                        color: widget.selected
                             ? const Color(0xFF2D6BFF)
                             : const Color(0xFF344054),
-                        fontWeight: (widget.selected || _hover)
+                        fontWeight: widget.selected
                             ? FontWeight.w800
                             : FontWeight.w600)),
               ),
               Text('${widget.count}',
                   style: TextStyle(
                       fontSize: 12,
-                      color: (widget.selected || _hover)
+                      color: widget.selected
                           ? const Color(0xFF2D6BFF)
                           : const Color(0xFF66738A),
                       fontWeight: FontWeight.w700)),
@@ -5964,6 +5979,8 @@ class _PPDeskSessionRowState extends State<_PPDeskSessionRow> {
 
   (String, Color) _status(String status) {
     return switch (status) {
+      'online' => ('在线', const Color(0xFF20C66B)),
+      'offline' => ('离线', const Color(0xFF98A2B3)),
       'failed' => ('失败', const Color(0xFFFF314A)),
       'interrupted' => ('中断', const Color(0xFFFF9500)),
       _ => ('成功', const Color(0xFF20C66B)),
