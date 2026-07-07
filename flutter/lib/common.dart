@@ -931,31 +931,45 @@ class OverlayDialogManager {
       }
 
       return CustomAlertDialog(
-        content: Container(
-            constraints: const BoxConstraints(maxWidth: 240),
-            child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 30),
-                  const Center(child: CircularProgressIndicator()),
-                  const SizedBox(height: 20),
-                  Center(
-                      child: Text(translate(text),
-                          style: const TextStyle(fontSize: 15))),
-                  const SizedBox(height: 20),
-                  Offstage(
-                      offstage: !showCancel,
-                      child: Center(
-                          child: (isDesktop || isWebDesktop)
-                              ? dialogButton('Cancel', onPressed: cancel)
-                              : TextButton(
-                                  style: flatButtonStyle,
-                                  onPressed: cancel,
-                                  child: Text(translate('Cancel'),
-                                      style: const TextStyle(
-                                          color: MyTheme.accent)))))
-                ])),
+        content: SizedBox(
+          width: 250,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Image.asset('assets/ppdesk_logo.png', width: 58, height: 58),
+              const SizedBox(height: 22),
+              const SizedBox(
+                width: 34,
+                height: 34,
+                child: CircularProgressIndicator(
+                  strokeWidth: 3,
+                  color: Color(0xFF2D6BFF),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(translate(text),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                      fontSize: 16,
+                      color: Color(0xFF66738A),
+                      fontWeight: FontWeight.w700)),
+              if (showCancel) ...[
+                const SizedBox(height: 22),
+                SizedBox(
+                  height: 38,
+                  child: (isDesktop || isWebDesktop)
+                      ? dialogButton('Cancel', onPressed: cancel)
+                      : TextButton(
+                          style: flatButtonStyle,
+                          onPressed: cancel,
+                          child: Text(translate('Cancel'),
+                              style: const TextStyle(color: MyTheme.accent))),
+                ),
+              ],
+            ],
+          ),
+        ),
         onCancel: showCancel ? cancel : null,
       );
     }, tag: tag);

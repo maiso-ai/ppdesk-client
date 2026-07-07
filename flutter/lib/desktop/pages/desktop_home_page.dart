@@ -85,6 +85,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   String _ppDeskSessionType = 'all';
   String _ppDeskSessionTime = 'all';
   SettingsTabKey _ppDeskSettingTab = SettingsTabKey.account;
+  bool _ppDeskShowStartup = true;
 
   @override
   Widget build(BuildContext context) {
@@ -120,11 +121,16 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           final sidebarWidth = compact ? 260.0 : 296.0;
           return Container(
             color: const Color(0xFFF8FAFF),
-            child: Row(
+            child: Stack(
               children: [
-                _buildPPDeskSidebar(context, isOutgoingOnly,
-                    width: sidebarWidth, compact: compact),
-                Expanded(child: _buildPPDeskMain(context, isOutgoingOnly)),
+                Row(
+                  children: [
+                    _buildPPDeskSidebar(context, isOutgoingOnly,
+                        width: sidebarWidth, compact: compact),
+                    Expanded(child: _buildPPDeskMain(context, isOutgoingOnly)),
+                  ],
+                ),
+                if (_ppDeskShowStartup) _buildPPDeskStartupOverlay(compact),
               ],
             ),
           );
@@ -152,7 +158,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
             children: [
               Row(
                 children: [
-                  SvgPicture.asset('assets/ppdesk_logo.svg',
+                  Image.asset('assets/ppdesk_logo.png',
                       width: logoSize, height: logoSize),
                   const SizedBox(width: 14),
                   const Expanded(
@@ -289,6 +295,66 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         ),
       );
     });
+  }
+
+  Widget _buildPPDeskStartupOverlay(bool compact) {
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: AnimatedOpacity(
+          opacity: _ppDeskShowStartup ? 1 : 0,
+          duration: const Duration(milliseconds: 180),
+          child: Container(
+            decoration: const BoxDecoration(
+              color: Color(0xFFF8FAFF),
+            ),
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Image.asset('assets/ppdesk_logo.png',
+                      width: compact ? 76 : 92, height: compact ? 76 : 92),
+                  const SizedBox(height: 22),
+                  Text('皮皮远程',
+                      style: TextStyle(
+                          color: const Color(0xFF101828),
+                          fontSize: compact ? 32 : 40,
+                          height: 1.05,
+                          fontWeight: FontWeight.w900)),
+                  const SizedBox(height: 8),
+                  Text('PPDesk',
+                      style: TextStyle(
+                          color: const Color(0xFF7C8AA5),
+                          fontSize: compact ? 21 : 26,
+                          letterSpacing: 0,
+                          fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 34),
+                  const SizedBox(
+                    width: 34,
+                    height: 34,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 3,
+                      color: Color(0xFF4D5DFF),
+                    ),
+                  ),
+                  const SizedBox(height: 22),
+                  Text('正在启动...',
+                      style: TextStyle(
+                          color: const Color(0xFF101828),
+                          fontSize: compact ? 18 : 21,
+                          fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 8),
+                  Text('安全连接，随时随地',
+                      style: TextStyle(
+                          color: const Color(0xFF7C8AA5),
+                          fontSize: compact ? 14 : 16,
+                          fontWeight: FontWeight.w600)),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildPPDeskCopyLine(BuildContext context,
@@ -2073,38 +2139,37 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     required bool selected,
     required VoidCallback onTap,
   }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
-      hoverColor: Colors.transparent,
-      splashColor: Colors.transparent,
-      highlightColor: Colors.transparent,
-      focusColor: Colors.transparent,
-      child: Container(
-        height: 44,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        decoration: BoxDecoration(
-          color: selected ? const Color(0xFFEAF0FF) : Colors.transparent,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                label,
-                style: TextStyle(
-                  color: selected
-                      ? const Color(0xFF2D6BFF)
-                      : const Color(0xFF101828),
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Container(
+          height: 44,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: selected ? const Color(0xFFEAF0FF) : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: selected
+                        ? const Color(0xFF2D6BFF)
+                        : const Color(0xFF101828),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
-            ),
-            if (selected)
-              const Icon(Icons.check_rounded,
-                  color: Color(0xFF2D6BFF), size: 18),
-          ],
+              if (selected)
+                const Icon(Icons.check_rounded,
+                    color: Color(0xFF2D6BFF), size: 18),
+            ],
+          ),
         ),
       ),
     );
@@ -3117,24 +3182,33 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                 left: 12,
                 child: Align(
                   alignment: Alignment.centerLeft,
-                  child: InkWell(
-                    child: Obx(
-                      () => Icon(
-                        Icons.settings,
-                        color: _editHover.value
-                            ? textColor
-                            : Colors.grey.withValues(alpha: 0.5),
-                        size: 22,
+                  child: MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    onEnter: (_) => _editHover.value = true,
+                    onExit: (_) => _editHover.value = false,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => {
+                        if (DesktopSettingPage.tabKeys.isNotEmpty)
+                          {
+                            DesktopSettingPage.switch2page(
+                                DesktopSettingPage.tabKeys[0])
+                          }
+                      },
+                      child: SizedBox(
+                        width: 28,
+                        height: 28,
+                        child: Obx(
+                          () => Icon(
+                            Icons.settings,
+                            color: _editHover.value
+                                ? textColor
+                                : Colors.grey.withValues(alpha: 0.5),
+                            size: 22,
+                          ),
+                        ),
                       ),
                     ),
-                    onTap: () => {
-                      if (DesktopSettingPage.tabKeys.isNotEmpty)
-                        {
-                          DesktopSettingPage.switch2page(
-                              DesktopSettingPage.tabKeys[0])
-                        }
-                    },
-                    onHover: (value) => _editHover.value = value,
                   ),
                 ),
               )
@@ -3222,26 +3296,31 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   Widget buildPopupMenu(BuildContext context) {
     final textColor = Theme.of(context).textTheme.titleLarge?.color;
     RxBool hover = false.obs;
-    return InkWell(
-      onTap: DesktopTabPage.onAddSetting,
-      child: Tooltip(
-        message: translate('Settings'),
-        child: Obx(
-          () => CircleAvatar(
-            radius: 15,
-            backgroundColor: hover.value
-                ? Theme.of(context).scaffoldBackgroundColor
-                : Theme.of(context).colorScheme.surface,
-            child: Icon(
-              Icons.more_vert_outlined,
-              size: 20,
-              color:
-                  hover.value ? textColor : textColor?.withValues(alpha: 0.5),
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => hover.value = true,
+      onExit: (_) => hover.value = false,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: DesktopTabPage.onAddSetting,
+        child: Tooltip(
+          message: translate('Settings'),
+          child: Obx(
+            () => CircleAvatar(
+              radius: 15,
+              backgroundColor: hover.value
+                  ? Theme.of(context).scaffoldBackgroundColor
+                  : Theme.of(context).colorScheme.surface,
+              child: Icon(
+                Icons.more_vert_outlined,
+                size: 20,
+                color:
+                    hover.value ? textColor : textColor?.withValues(alpha: 0.5),
+              ),
             ),
           ),
         ),
       ),
-      onHover: (value) => hover.value = value,
     );
   }
 
@@ -3628,17 +3707,20 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                       (help != null
                           ? <Widget>[
                               Center(
-                                  child: InkWell(
-                                      onTap: () async =>
-                                          await launchUrl(Uri.parse(link!)),
-                                      child: Text(
-                                        translate(help),
-                                        style: TextStyle(
-                                            decoration:
-                                                TextDecoration.underline,
-                                            color: Colors.white,
-                                            fontSize: 12),
-                                      )).marginOnly(top: 6)),
+                                  child: MouseRegion(
+                                cursor: SystemMouseCursors.click,
+                                child: GestureDetector(
+                                    behavior: HitTestBehavior.opaque,
+                                    onTap: () async =>
+                                        await launchUrl(Uri.parse(link!)),
+                                    child: Text(
+                                      translate(help),
+                                      style: TextStyle(
+                                          decoration: TextDecoration.underline,
+                                          color: Colors.white,
+                                          fontSize: 12),
+                                    )),
+                              ).marginOnly(top: 6)),
                             ]
                           : <Widget>[]))),
         ),
@@ -3664,6 +3746,9 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     super.initState();
     _ppDeskAllPeersLoader.init(setState);
     _ppDeskIdFocusNode.addListener(_onPPDeskIdFocusChanged);
+    Timer(const Duration(milliseconds: 950), () {
+      if (mounted) setState(() => _ppDeskShowStartup = false);
+    });
     bind.mainLoadRecentPeers();
     bind.mainLoadFavPeers();
     bind.mainLoadLanPeers();
@@ -4021,15 +4106,12 @@ class _PPDeskNavItemState extends State<_PPDeskNavItem> {
         ? const Color(0xFF2D6BFF)
         : const Color(0xFF202B3D);
     return MouseRegion(
+      cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _hover = true),
       onExit: (_) => setState(() => _hover = false),
-      child: InkWell(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: widget.onTap,
-        borderRadius: BorderRadius.circular(10),
-        hoverColor: Colors.transparent,
-        splashColor: Colors.transparent,
-        highlightColor: Colors.transparent,
-        focusColor: Colors.transparent,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 140),
           height: widget.compact ? 52 : 62,
@@ -4086,13 +4168,9 @@ class _PPDeskPrimaryButtonState extends State<_PPDeskPrimaryButton> {
   Widget build(BuildContext context) {
     return MouseRegion(
       cursor: SystemMouseCursors.click,
-      child: InkWell(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: widget.onTap,
-        borderRadius: BorderRadius.circular(12),
-        hoverColor: Colors.transparent,
-        splashColor: Colors.transparent,
-        highlightColor: Colors.transparent,
-        focusColor: Colors.transparent,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 140),
           width: widget.compact ? 156 : 206,
@@ -4315,13 +4393,9 @@ class _PPDeskSmallButtonState extends State<_PPDeskSmallButton> {
   Widget build(BuildContext context) {
     return MouseRegion(
       cursor: SystemMouseCursors.click,
-      child: InkWell(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: widget.onTap,
-        borderRadius: BorderRadius.circular(8),
-        hoverColor: Colors.transparent,
-        splashColor: Colors.transparent,
-        highlightColor: Colors.transparent,
-        focusColor: Colors.transparent,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
           height: widget.compact ? 30 : 34,
@@ -4378,13 +4452,10 @@ class _PPDeskOutlineButtonState extends State<_PPDeskOutlineButton> {
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),
       onExit: (_) => setState(() => _hover = false),
-      child: InkWell(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: widget.onTap,
-        borderRadius: BorderRadius.circular(10),
-        hoverColor: Colors.transparent,
-        splashColor: Colors.transparent,
-        highlightColor: Colors.transparent,
-        focusColor: Colors.transparent,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
           height: widget.compact ? 44 : 52,
@@ -4447,13 +4518,10 @@ class _PPDeskPagerButtonState extends State<_PPDeskPagerButton> {
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),
       onExit: (_) => setState(() => _hover = false),
-      child: InkWell(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: widget.onTap,
-        borderRadius: BorderRadius.circular(8),
-        hoverColor: Colors.transparent,
-        splashColor: Colors.transparent,
-        highlightColor: Colors.transparent,
-        focusColor: Colors.transparent,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
           width: widget.compact ? 34 : 38,
@@ -4509,13 +4577,10 @@ class _PPDeskSettingsTabItemState extends State<_PPDeskSettingsTabItem> {
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),
       onExit: (_) => setState(() => _hover = false),
-      child: InkWell(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: widget.onTap,
-        borderRadius: BorderRadius.circular(9),
-        hoverColor: Colors.transparent,
-        splashColor: Colors.transparent,
-        highlightColor: Colors.transparent,
-        focusColor: Colors.transparent,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
           height: widget.compact ? 40 : 46,
@@ -4761,13 +4826,9 @@ class _PPDeskSettingActionRowState extends State<_PPDeskSettingActionRow> {
         widget.danger ? const Color(0xFFE5484D) : const Color(0xFF2D6BFF);
     return MouseRegion(
       cursor: SystemMouseCursors.click,
-      child: InkWell(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: () async => widget.onTap(),
-        borderRadius: BorderRadius.circular(10),
-        hoverColor: Colors.transparent,
-        splashColor: Colors.transparent,
-        highlightColor: Colors.transparent,
-        focusColor: Colors.transparent,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
           color: Colors.transparent,
@@ -4823,13 +4884,9 @@ class _PPDeskSettingSelectRowState extends State<_PPDeskSettingSelectRow> {
     return MouseRegion(
       cursor:
           widget.disabled ? SystemMouseCursors.basic : SystemMouseCursors.click,
-      child: InkWell(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: widget.disabled ? null : () async => widget.onTap(),
-        borderRadius: BorderRadius.circular(10),
-        hoverColor: Colors.transparent,
-        splashColor: Colors.transparent,
-        highlightColor: Colors.transparent,
-        focusColor: Colors.transparent,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
           color: Colors.transparent,
@@ -4910,40 +4967,43 @@ class _PPDeskSettingSwitchRowState extends State<_PPDeskSettingSwitchRow> {
   @override
   Widget build(BuildContext context) {
     final active = _value && widget.enabled;
-    return InkWell(
-      onTap: widget.enabled && !_busy ? _toggle : null,
-      borderRadius: BorderRadius.circular(10),
-      hoverColor: Colors.transparent,
-      splashColor: Colors.transparent,
-      highlightColor: Colors.transparent,
-      focusColor: Colors.transparent,
-      child: _PPDeskSettingBaseRow(
-        compact: widget.compact,
-        icon: widget.icon,
-        iconColor:
-            widget.enabled ? const Color(0xFF2D6BFF) : const Color(0xFFA1AEC2),
-        title: widget.title,
-        subtitle: widget.subtitle,
-        titleColor:
-            widget.enabled ? const Color(0xFF101828) : const Color(0xFF98A6BA),
-        trailing: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          width: widget.compact ? 42 : 48,
-          height: widget.compact ? 24 : 28,
-          padding: const EdgeInsets.all(3),
-          decoration: BoxDecoration(
-            color: active ? const Color(0xFF2D6BFF) : const Color(0xFFD4DCE8),
-            borderRadius: BorderRadius.circular(999),
-          ),
-          child: AnimatedAlign(
+    return MouseRegion(
+      cursor: widget.enabled && !_busy
+          ? SystemMouseCursors.click
+          : SystemMouseCursors.basic,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: widget.enabled && !_busy ? _toggle : null,
+        child: _PPDeskSettingBaseRow(
+          compact: widget.compact,
+          icon: widget.icon,
+          iconColor: widget.enabled
+              ? const Color(0xFF2D6BFF)
+              : const Color(0xFFA1AEC2),
+          title: widget.title,
+          subtitle: widget.subtitle,
+          titleColor: widget.enabled
+              ? const Color(0xFF101828)
+              : const Color(0xFF98A6BA),
+          trailing: AnimatedContainer(
             duration: const Duration(milliseconds: 150),
-            alignment: active ? Alignment.centerRight : Alignment.centerLeft,
-            child: Container(
-              width: widget.compact ? 18 : 22,
-              height: widget.compact ? 18 : 22,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
+            width: widget.compact ? 42 : 48,
+            height: widget.compact ? 24 : 28,
+            padding: const EdgeInsets.all(3),
+            decoration: BoxDecoration(
+              color: active ? const Color(0xFF2D6BFF) : const Color(0xFFD4DCE8),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: AnimatedAlign(
+              duration: const Duration(milliseconds: 150),
+              alignment: active ? Alignment.centerRight : Alignment.centerLeft,
+              child: Container(
+                width: widget.compact ? 18 : 22,
+                height: widget.compact ? 18 : 22,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                ),
               ),
             ),
           ),
@@ -5092,13 +5152,10 @@ class _PPDeskGroupItemState extends State<_PPDeskGroupItem> {
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),
       onExit: (_) => setState(() => _hover = false),
-      child: InkWell(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: widget.onTap,
-        borderRadius: BorderRadius.circular(9),
-        hoverColor: Colors.transparent,
-        splashColor: Colors.transparent,
-        highlightColor: Colors.transparent,
-        focusColor: Colors.transparent,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
           height: widget.compact ? 38 : 44,
@@ -5178,13 +5235,10 @@ class _PPDeskToolCardState extends State<_PPDeskToolCard> {
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),
       onExit: (_) => setState(() => _hover = false),
-      child: InkWell(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: widget.tool.onTap,
-        borderRadius: BorderRadius.circular(14),
-        hoverColor: Colors.transparent,
-        splashColor: Colors.transparent,
-        highlightColor: Colors.transparent,
-        focusColor: Colors.transparent,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 140),
           padding: EdgeInsets.all(widget.compact ? 18 : 24),
@@ -5266,13 +5320,9 @@ class _PPDeskRecentToolCardState extends State<_PPDeskRecentToolCard> {
   Widget build(BuildContext context) {
     return MouseRegion(
       cursor: SystemMouseCursors.click,
-      child: InkWell(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: widget.tool.onTap,
-        borderRadius: BorderRadius.circular(10),
-        hoverColor: Colors.transparent,
-        splashColor: Colors.transparent,
-        highlightColor: Colors.transparent,
-        focusColor: Colors.transparent,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
           padding: EdgeInsets.all(widget.compact ? 10 : 12),
@@ -5344,13 +5394,10 @@ class _PPDeskHelpActionState extends State<_PPDeskHelpAction> {
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),
       onExit: (_) => setState(() => _hover = false),
-      child: InkWell(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: widget.onTap,
-        borderRadius: BorderRadius.circular(8),
-        hoverColor: Colors.transparent,
-        splashColor: Colors.transparent,
-        highlightColor: Colors.transparent,
-        focusColor: Colors.transparent,
         child: Row(
           children: [
             SvgPicture.asset('assets/${widget.icon}.svg',
@@ -5399,13 +5446,10 @@ class _PPDeskActionTileState extends State<_PPDeskActionTile> {
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),
       onExit: (_) => setState(() => _hover = false),
-      child: InkWell(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: widget.onTap,
-        borderRadius: BorderRadius.circular(12),
-        hoverColor: Colors.transparent,
-        splashColor: Colors.transparent,
-        highlightColor: Colors.transparent,
-        focusColor: Colors.transparent,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 140),
           height: widget.compact ? 44 : 62,
@@ -5607,13 +5651,10 @@ class _PPDeskRecentRowState extends State<_PPDeskRecentRow> {
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),
       onExit: (_) => setState(() => _hover = false),
-      child: InkWell(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: widget.onConnect,
-        borderRadius: BorderRadius.circular(10),
-        hoverColor: Colors.transparent,
-        splashColor: Colors.transparent,
-        highlightColor: Colors.transparent,
-        focusColor: Colors.transparent,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
           height: height,
@@ -5773,12 +5814,9 @@ class _PPDeskSessionRowState extends State<_PPDeskSessionRow> {
         fontWeight: FontWeight.w500);
     return MouseRegion(
       cursor: SystemMouseCursors.click,
-      child: InkWell(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: widget.onOpen,
-        hoverColor: Colors.transparent,
-        splashColor: Colors.transparent,
-        highlightColor: Colors.transparent,
-        focusColor: Colors.transparent,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
           height: rowHeight,
@@ -6010,12 +6048,9 @@ class _PPDeskDeviceRowState extends State<_PPDeskDeviceRow> {
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
-      child: InkWell(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: widget.onConnect,
-        hoverColor: Colors.transparent,
-        splashColor: Colors.transparent,
-        highlightColor: Colors.transparent,
-        focusColor: Colors.transparent,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
           height: rowHeight,
@@ -6197,13 +6232,10 @@ class _PPDeskIconButtonState extends State<_PPDeskIconButton> {
       child: MouseRegion(
         onEnter: (_) => setState(() => _hover = true),
         onExit: (_) => setState(() => _hover = false),
-        child: InkWell(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
           onTap: widget.onTap,
-          borderRadius: BorderRadius.circular(9),
-          hoverColor: Colors.transparent,
-          splashColor: Colors.transparent,
-          highlightColor: Colors.transparent,
-          focusColor: Colors.transparent,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 140),
             width: 34,

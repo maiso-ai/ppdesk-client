@@ -17,6 +17,7 @@ cert.pfx
 *png
 *svg
 !flutter/assets/ppdesk_*.svg
+!flutter/assets/ppdesk_logo.png
 *jpg
 sciter.dll
 **pdb
