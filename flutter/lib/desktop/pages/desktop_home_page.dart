@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:convert';
 
 import 'package:auto_size_text/auto_size_text.dart';
+import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hbb/common/formatter/id_formatter.dart';
@@ -457,8 +458,6 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                       ],
                     ),
                   ),
-                  const SizedBox(width: 18),
-                  _buildPPDeskTopBar(),
                 ],
               ),
               SizedBox(height: blockGap),
@@ -472,58 +471,6 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           ),
         );
       },
-    );
-  }
-
-  Widget _buildPPDeskTopBar() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: [
-        _PPDeskRoundButton(
-            icon: 'ppdesk_search',
-            onTap: () {
-              if (_ppDeskPage == 1) {
-                _ppDeskDeviceSearchFocusNode.requestFocus();
-              } else if (_ppDeskPage == 2) {
-                _ppDeskSessionSearchFocusNode.requestFocus();
-              } else {
-                _ppDeskIdFocusNode.requestFocus();
-              }
-            }),
-        const SizedBox(width: 16),
-        Stack(
-          clipBehavior: Clip.none,
-          children: [
-            _PPDeskRoundButton(icon: 'ppdesk_bell', onTap: _openPPDeskNotice),
-            Positioned(
-              right: 8,
-              top: 6,
-              child: Container(
-                width: 8,
-                height: 8,
-                decoration: const BoxDecoration(
-                    color: Color(0xFF2D6BFF), shape: BoxShape.circle),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(width: 16),
-        Container(
-          width: 42,
-          height: 42,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: const Color(0xFFEAF0FF),
-            shape: BoxShape.circle,
-            border: Border.all(color: const Color(0xFFDCE6FF)),
-          ),
-          child: const Text('皮',
-              style: TextStyle(
-                  color: Color(0xFF2D6BFF),
-                  fontWeight: FontWeight.w800,
-                  fontSize: 18)),
-        ),
-      ],
     );
   }
 
@@ -565,8 +512,6 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                     ],
                   ),
                 ),
-                const SizedBox(width: 18),
-                _buildPPDeskTopBar(),
               ],
             ),
             SizedBox(height: compact ? 16 : 24),
@@ -594,44 +539,18 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     return Row(
       children: [
         Expanded(
-          child: Container(
-            height: compact ? 44 : 52,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFFE1E8F4)),
-            ),
-            child: Row(
-              children: [
-                const SizedBox(width: 14),
-                Expanded(
-                  child: TextField(
-                    controller: _ppDeskDeviceSearchController,
-                    focusNode: _ppDeskDeviceSearchFocusNode,
-                    autocorrect: false,
-                    enableSuggestions: false,
-                    style: TextStyle(
-                        fontSize: compact ? 13 : 14,
-                        color: const Color(0xFF101828)),
-                    decoration: const InputDecoration(
-                      border: InputBorder.none,
-                      hintText: '搜索设备名称或设备 ID',
-                      hintStyle: TextStyle(color: Color(0xFFA1AEC2)),
-                    ),
-                    onChanged: (value) =>
-                        setState(() => _ppDeskDeviceSearch = value),
-                  ).workaroundFreezeLinuxMint(),
-                ),
-                _ppDeskSvg('ppdesk_search',
-                    color: const Color(0xFF1F2A44), size: compact ? 18 : 20),
-                const SizedBox(width: 14),
-              ],
-            ),
+          child: _buildPPDeskSearchField(
+            controller: _ppDeskDeviceSearchController,
+            focusNode: _ppDeskDeviceSearchFocusNode,
+            hintText: '搜索设备名称或设备 ID',
+            compact: compact,
+            onChanged: (value) => setState(() => _ppDeskDeviceSearch = value),
           ),
         ),
         SizedBox(width: compact ? 8 : 12),
         _PPDeskFilterButton(
           label: '分组',
+          selected: _ppDeskDeviceGroup,
           value: _ppDeskGroupLabel(_ppDeskDeviceGroup),
           compact: compact,
           items: const {
@@ -646,6 +565,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         SizedBox(width: compact ? 8 : 12),
         _PPDeskFilterButton(
           label: '平台',
+          selected: _ppDeskDevicePlatform,
           value: _ppDeskPlatformLabel(_ppDeskDevicePlatform),
           compact: compact,
           items: const {
@@ -660,6 +580,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         SizedBox(width: compact ? 8 : 12),
         _PPDeskFilterButton(
           label: '状态',
+          selected: _ppDeskDeviceStatus,
           value: _ppDeskStatusLabel(_ppDeskDeviceStatus),
           compact: compact,
           items: const {
@@ -677,6 +598,66 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           onTap: () => showToast('请先连接设备，再在查看全部中加入地址簿'),
         ),
       ],
+    );
+  }
+
+  Widget _buildPPDeskSearchField({
+    required TextEditingController controller,
+    required FocusNode focusNode,
+    required String hintText,
+    required bool compact,
+    required ValueChanged<String> onChanged,
+  }) {
+    return Container(
+      height: compact ? 40 : 44,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFDCE6F4)),
+      ),
+      child: Row(
+        children: [
+          const SizedBox(width: 12),
+          Expanded(
+            child: ColoredBox(
+              color: Colors.white,
+              child: TextField(
+                controller: controller,
+                focusNode: focusNode,
+                autocorrect: false,
+                enableSuggestions: false,
+                enableInteractiveSelection: false,
+                cursorColor: const Color(0xFF2D6BFF),
+                style: TextStyle(
+                    fontSize: compact ? 12 : 13,
+                    height: 1.25,
+                    color: const Color(0xFF101828),
+                    fontWeight: FontWeight.w600),
+                decoration: InputDecoration(
+                  isDense: true,
+                  filled: true,
+                  fillColor: Colors.white,
+                  hoverColor: Colors.white,
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  hintText: hintText,
+                  hintStyle: TextStyle(
+                      color: const Color(0xFFA1AEC2),
+                      fontSize: compact ? 12 : 13,
+                      fontWeight: FontWeight.w600),
+                  contentPadding:
+                      EdgeInsets.symmetric(vertical: compact ? 10 : 12),
+                ),
+                onChanged: onChanged,
+              ).workaroundFreezeLinuxMint(),
+            ),
+          ),
+          _ppDeskSvg('ppdesk_search',
+              color: const Color(0xFF1F2A44), size: compact ? 18 : 20),
+          const SizedBox(width: 12),
+        ],
+      ),
     );
   }
 
@@ -1018,8 +999,6 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                     ],
                   ),
                 ),
-                const SizedBox(width: 18),
-                _buildPPDeskTopBar(),
               ],
             ),
             SizedBox(height: compact ? 16 : 24),
@@ -1038,44 +1017,18 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     return Row(
       children: [
         Expanded(
-          child: Container(
-            height: compact ? 44 : 52,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFFE1E8F4)),
-            ),
-            child: Row(
-              children: [
-                const SizedBox(width: 14),
-                Expanded(
-                  child: TextField(
-                    controller: _ppDeskSessionSearchController,
-                    focusNode: _ppDeskSessionSearchFocusNode,
-                    autocorrect: false,
-                    enableSuggestions: false,
-                    style: TextStyle(
-                        fontSize: compact ? 13 : 14,
-                        color: const Color(0xFF101828)),
-                    decoration: const InputDecoration(
-                      border: InputBorder.none,
-                      hintText: '搜索设备名称、设备 ID 或会话内容',
-                      hintStyle: TextStyle(color: Color(0xFFA1AEC2)),
-                    ),
-                    onChanged: (value) =>
-                        setState(() => _ppDeskSessionSearch = value),
-                  ).workaroundFreezeLinuxMint(),
-                ),
-                _ppDeskSvg('ppdesk_search',
-                    color: const Color(0xFF1F2A44), size: compact ? 18 : 20),
-                const SizedBox(width: 14),
-              ],
-            ),
+          child: _buildPPDeskSearchField(
+            controller: _ppDeskSessionSearchController,
+            focusNode: _ppDeskSessionSearchFocusNode,
+            hintText: '搜索设备名称、设备 ID 或会话内容',
+            compact: compact,
+            onChanged: (value) => setState(() => _ppDeskSessionSearch = value),
           ),
         ),
         SizedBox(width: compact ? 8 : 12),
         _PPDeskFilterButton(
           label: '会话类型',
+          selected: _ppDeskSessionType,
           value: _ppDeskSessionTypeLabel(_ppDeskSessionType),
           compact: compact,
           items: const {
@@ -1088,6 +1041,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         SizedBox(width: compact ? 8 : 12),
         _PPDeskFilterButton(
           label: '时间',
+          selected: _ppDeskSessionTime,
           value: _ppDeskSessionTimeLabel(_ppDeskSessionTime),
           compact: compact,
           items: const {
@@ -1361,8 +1315,6 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                 ],
               ),
             ),
-            const SizedBox(width: 18),
-            _buildPPDeskTopBar(),
           ],
         ),
         SizedBox(height: compact ? 16 : 24),
@@ -1377,8 +1329,6 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                   clipBehavior: Clip.antiAlias,
                   child: Column(
                     children: [
-                      _buildPPDeskSettingsProfileCard(compact: compact),
-                      const Divider(height: 1, color: Color(0xFFE8EEF8)),
                       Expanded(
                         child: KeyedSubtree(
                           key: ValueKey(selected),
@@ -1415,85 +1365,6 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               compact: compact,
               onTap: () => setState(() => _ppDeskSettingTab = tab),
             ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPPDeskSettingsProfileCard({required bool compact}) {
-    return Container(
-      padding: EdgeInsets.all(compact ? 14 : 18),
-      color: Colors.white,
-      child: Row(
-        children: [
-          Container(
-            width: compact ? 48 : 62,
-            height: compact ? 48 : 62,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: const LinearGradient(
-                  colors: [Color(0xFFEAF0FF), Color(0xFFDDE8FF)]),
-              border: Border.all(color: const Color(0xFFE1E8F4)),
-            ),
-            child: Text('皮',
-                style: TextStyle(
-                    fontSize: compact ? 22 : 28,
-                    color: const Color(0xFF2D6BFF),
-                    fontWeight: FontWeight.w900)),
-          ),
-          SizedBox(width: compact ? 12 : 18),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text('皮皮用户',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                            fontSize: compact ? 17 : 20,
-                            fontWeight: FontWeight.w900,
-                            color: const Color(0xFF101828))),
-                    const SizedBox(width: 10),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE6F8EE),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: const Text('已认证',
-                          style: TextStyle(
-                              fontSize: 12,
-                              color: Color(0xFF18A957),
-                              fontWeight: FontWeight.w800)),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                const Text('user@example.com',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 13, color: Color(0xFF66738A))),
-              ],
-            ),
-          ),
-          _PPDeskOutlineButton(
-            icon: 'ppdesk_user',
-            label: '修改头像',
-            compact: compact,
-            onTap: () =>
-                setState(() => _ppDeskSettingTab = SettingsTabKey.account),
-          ),
-          const SizedBox(width: 10),
-          _PPDeskOutlineButton(
-            icon: 'ppdesk_lock',
-            label: '修改密码',
-            compact: compact,
-            onTap: () => setPasswordDialog(),
-          ),
         ],
       ),
     );
@@ -2179,8 +2050,6 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                 ],
               ),
             ),
-            const SizedBox(width: 18),
-            _buildPPDeskTopBar(),
           ],
         ),
         SizedBox(height: compact ? 16 : 24),
@@ -2701,28 +2570,10 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                 },
               ),
             ),
-            PopupMenuButton<String>(
-              tooltip: translate('More'),
-              offset: const Offset(0, 10),
-              onSelected: (value) {
-                if (value == 'file') {
-                  _ppDeskConnect(isFileTransfer: true);
-                } else if (value == 'camera') {
-                  _ppDeskConnect(isViewCamera: true);
-                } else if (value == 'terminal') {
-                  _ppDeskConnect(isTerminal: true);
-                }
-              },
-              itemBuilder: (context) => [
-                PopupMenuItem(
-                    value: 'file', child: Text(translate('Transfer file'))),
-                PopupMenuItem(
-                    value: 'camera', child: Text(translate('View camera'))),
-                PopupMenuItem(
-                    value: 'terminal',
-                    child: Text('${translate('Terminal')} (beta)')),
-              ],
-              child: Container(
+            _PPDeskMoreMenu(
+              compact: compact,
+              menuWidth: compact ? 132 : 148,
+              customButton: Container(
                 width: 56,
                 height: compact ? 46 : 56,
                 alignment: Alignment.center,
@@ -2732,6 +2583,21 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                 child: _ppDeskSvg('ppdesk_chevron_down',
                     color: const Color(0xFF66738A), size: 20),
               ),
+              onSelected: (value) {
+                if (value == 'file') {
+                  _ppDeskConnect(isFileTransfer: true);
+                } else if (value == 'camera') {
+                  _ppDeskConnect(isViewCamera: true);
+                } else if (value == 'terminal') {
+                  _ppDeskConnect(isTerminal: true);
+                }
+              },
+              actions: [
+                _PPDeskMenuAction('file', translate('Transfer file')),
+                _PPDeskMenuAction('camera', translate('View camera')),
+                _PPDeskMenuAction(
+                    'terminal', '${translate('Terminal')} (beta)'),
+              ],
             ),
           ],
         ),
@@ -2939,35 +2805,6 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       isViewCamera: isViewCamera,
       isTerminal: isTerminal,
     );
-  }
-
-  void _openPPDeskNotice() {
-    if (systemError.isNotEmpty) {
-      showToast(systemError);
-      return;
-    }
-    if (isMacOS) {
-      final isOutgoingOnly = bind.isOutgoingOnly();
-      if (!(isOutgoingOnly || bind.mainIsCanScreenRecording(prompt: false))) {
-        bind.mainIsCanScreenRecording(prompt: true);
-        watchIsCanScreenRecording = true;
-        return;
-      }
-      if (!isOutgoingOnly && !bind.mainIsProcessTrusted(prompt: false)) {
-        bind.mainIsProcessTrusted(prompt: true);
-        watchIsProcessTrust = true;
-        return;
-      }
-      if (!bind.mainIsCanInputMonitoring(prompt: false)) {
-        bind.mainIsCanInputMonitoring(prompt: true);
-        watchIsInputMonitoring = true;
-        return;
-      }
-    }
-    setState(() {
-      _ppDeskPage = 3;
-      _ppDeskSettingTab = SettingsTabKey.safety;
-    });
   }
 
   void _onPPDeskIdFocusChanged() {
@@ -4005,53 +3842,6 @@ class _PPDeskNavItemState extends State<_PPDeskNavItem> {
   }
 }
 
-class _PPDeskRoundButton extends StatefulWidget {
-  const _PPDeskRoundButton({required this.icon, required this.onTap});
-
-  final String icon;
-  final VoidCallback onTap;
-
-  @override
-  State<_PPDeskRoundButton> createState() => _PPDeskRoundButtonState();
-}
-
-class _PPDeskRoundButtonState extends State<_PPDeskRoundButton> {
-  bool _hover = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hover = true),
-      onExit: (_) => setState(() => _hover = false),
-      child: InkWell(
-        onTap: widget.onTap,
-        borderRadius: BorderRadius.circular(21),
-        hoverColor: Colors.transparent,
-        splashColor: Colors.transparent,
-        highlightColor: Colors.transparent,
-        focusColor: Colors.transparent,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 140),
-          width: 42,
-          height: 42,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: _hover ? const Color(0xFFEAF0FF) : Colors.transparent,
-          ),
-          child: SvgPicture.asset(
-            'assets/${widget.icon}.svg',
-            width: 22,
-            height: 22,
-            colorFilter:
-                const ColorFilter.mode(Color(0xFF1F2A44), BlendMode.srcIn),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _PPDeskPrimaryButton extends StatefulWidget {
   const _PPDeskPrimaryButton({
     required this.label,
@@ -4132,6 +3922,7 @@ class _PPDeskPrimaryButtonState extends State<_PPDeskPrimaryButton> {
 class _PPDeskFilterButton extends StatelessWidget {
   const _PPDeskFilterButton({
     required this.label,
+    required this.selected,
     required this.value,
     required this.items,
     required this.onChanged,
@@ -4139,6 +3930,7 @@ class _PPDeskFilterButton extends StatelessWidget {
   });
 
   final String label;
+  final String selected;
   final String value;
   final Map<String, String> items;
   final ValueChanged<String> onChanged;
@@ -4146,42 +3938,170 @@ class _PPDeskFilterButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return PopupMenuButton<String>(
-      tooltip: label,
-      offset: const Offset(0, 8),
-      onSelected: onChanged,
-      itemBuilder: (context) => items.entries
-          .map((item) => PopupMenuItem<String>(
-                value: item.key,
-                child: Text(item.value),
-              ))
-          .toList(),
-      child: Container(
-        height: compact ? 44 : 52,
-        width: compact ? 118 : 148,
-        padding: EdgeInsets.symmetric(horizontal: compact ? 10 : 14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0xFFE1E8F4)),
+    final width = compact ? 112.0 : 132.0;
+    return DropdownButtonHideUnderline(
+      child: DropdownButton2<String>(
+        value: selected,
+        onChanged: (value) {
+          if (value != null) onChanged(value);
+        },
+        customButton: Container(
+          height: compact ? 40 : 44,
+          width: width,
+          padding: EdgeInsets.symmetric(horizontal: compact ? 10 : 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: const Color(0xFFDCE6F4)),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text('$label：$value',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        fontSize: compact ? 12 : 13,
+                        color: const Color(0xFF344054),
+                        fontWeight: FontWeight.w700)),
+              ),
+              SvgPicture.asset('assets/ppdesk_chevron_down.svg',
+                  width: 15,
+                  height: 15,
+                  colorFilter: const ColorFilter.mode(
+                      Color(0xFF66738A), BlendMode.srcIn)),
+            ],
+          ),
         ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text('$label：$value',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                      fontSize: compact ? 12 : 13,
-                      color: const Color(0xFF344054),
-                      fontWeight: FontWeight.w600)),
+        items: items.entries
+            .map((item) => DropdownMenuItem<String>(
+                  value: item.key,
+                  child: Text(item.value,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          fontSize: compact ? 12 : 13,
+                          color: const Color(0xFF202B3D),
+                          fontWeight: FontWeight.w700)),
+                ))
+            .toList(),
+        dropdownStyleData: DropdownStyleData(
+          width: width,
+          maxHeight: compact ? 190 : 220,
+          offset: const Offset(0, -4),
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFE1E8F4)),
+            boxShadow: const [
+              BoxShadow(
+                  color: Color(0x181B3A6D),
+                  blurRadius: 18,
+                  offset: Offset(0, 8)),
+            ],
+          ),
+          elevation: 0,
+        ),
+        menuItemStyleData: MenuItemStyleData(
+          height: compact ? 34 : 38,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.hovered) ||
+                states.contains(WidgetState.focused) ||
+                states.contains(WidgetState.pressed)) {
+              return const Color(0xFFEAF0FF);
+            }
+            return Colors.transparent;
+          }),
+        ),
+      ),
+    );
+  }
+}
+
+class _PPDeskMenuAction {
+  const _PPDeskMenuAction(this.value, this.label);
+
+  final String value;
+  final String label;
+}
+
+class _PPDeskMoreMenu extends StatelessWidget {
+  const _PPDeskMoreMenu({
+    required this.actions,
+    required this.onSelected,
+    required this.compact,
+    this.customButton,
+    this.menuWidth,
+  });
+
+  final List<_PPDeskMenuAction> actions;
+  final ValueChanged<String> onSelected;
+  final bool compact;
+  final Widget? customButton;
+  final double? menuWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    return DropdownButtonHideUnderline(
+      child: DropdownButton2<String>(
+        customButton: customButton ??
+            Padding(
+              padding: const EdgeInsets.only(left: 8),
+              child: SvgPicture.asset('assets/ppdesk_more.svg',
+                  width: 18,
+                  height: 18,
+                  colorFilter: const ColorFilter.mode(
+                      Color(0xFF66738A), BlendMode.srcIn)),
             ),
-            SvgPicture.asset('assets/ppdesk_chevron_down.svg',
-                width: 16,
-                height: 16,
-                colorFilter:
-                    const ColorFilter.mode(Color(0xFF66738A), BlendMode.srcIn)),
-          ],
+        buttonStyleData: const ButtonStyleData(
+          overlayColor: WidgetStatePropertyAll(Colors.transparent),
+        ),
+        items: actions
+            .map((item) => DropdownMenuItem<String>(
+                  value: item.value,
+                  child: Text(item.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          fontSize: compact ? 12 : 13,
+                          color: const Color(0xFF202B3D),
+                          fontWeight: FontWeight.w700)),
+                ))
+            .toList(),
+        onChanged: (value) {
+          if (value != null) onSelected(value);
+        },
+        dropdownStyleData: DropdownStyleData(
+          width: menuWidth ?? (compact ? 104 : 118),
+          maxHeight: 160,
+          offset: const Offset(0, -4),
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFE1E8F4)),
+            boxShadow: const [
+              BoxShadow(
+                  color: Color(0x181B3A6D),
+                  blurRadius: 18,
+                  offset: Offset(0, 8)),
+            ],
+          ),
+          elevation: 0,
+        ),
+        menuItemStyleData: MenuItemStyleData(
+          height: compact ? 34 : 38,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.hovered) ||
+                states.contains(WidgetState.focused) ||
+                states.contains(WidgetState.pressed)) {
+              return const Color(0xFFEAF0FF);
+            }
+            return Colors.transparent;
+          }),
         ),
       ),
     );
@@ -5836,23 +5756,14 @@ class _PPDeskSessionRowState extends State<_PPDeskSessionRow> {
                 width: widget.compact ? 34 : 44,
                 child: Align(
                   alignment: Alignment.centerRight,
-                  child: PopupMenuButton<String>(
-                    tooltip: translate('More'),
-                    offset: const Offset(0, 8),
+                  child: _PPDeskMoreMenu(
+                    compact: widget.compact,
                     onSelected: widget.onAction,
-                    itemBuilder: (context) => [
-                      PopupMenuItem(
-                          value: 'connect', child: Text(translate('Connect'))),
-                      PopupMenuItem(
-                          value: 'file',
-                          child: Text(translate('Transfer file'))),
-                      const PopupMenuItem(value: 'detail', child: Text('详情')),
+                    actions: [
+                      _PPDeskMenuAction('connect', translate('Connect')),
+                      _PPDeskMenuAction('file', translate('Transfer file')),
+                      const _PPDeskMenuAction('detail', '详情'),
                     ],
-                    child: SvgPicture.asset('assets/ppdesk_more.svg',
-                        width: 18,
-                        height: 18,
-                        colorFilter: const ColorFilter.mode(
-                            Color(0xFF66738A), BlendMode.srcIn)),
                   ),
                 ),
               ),
@@ -6071,27 +5982,14 @@ class _PPDeskDeviceRowState extends State<_PPDeskDeviceRow> {
                                   : const Color(0xFF8A98AD),
                               BlendMode.srcIn)),
                     ),
-                    PopupMenuButton<String>(
-                      tooltip: translate('More'),
-                      offset: const Offset(0, 8),
+                    _PPDeskMoreMenu(
+                      compact: widget.compact,
                       onSelected: widget.onAction,
-                      itemBuilder: (context) => [
-                        PopupMenuItem(
-                            value: 'connect',
-                            child: Text(translate('Connect'))),
-                        PopupMenuItem(
-                            value: 'file',
-                            child: Text(translate('Transfer file'))),
-                        const PopupMenuItem(value: 'manage', child: Text('管理')),
+                      actions: [
+                        _PPDeskMenuAction('connect', translate('Connect')),
+                        _PPDeskMenuAction('file', translate('Transfer file')),
+                        const _PPDeskMenuAction('manage', '管理'),
                       ],
-                      child: Padding(
-                        padding: const EdgeInsets.only(left: 8),
-                        child: SvgPicture.asset('assets/ppdesk_more.svg',
-                            width: 18,
-                            height: 18,
-                            colorFilter: const ColorFilter.mode(
-                                Color(0xFF66738A), BlendMode.srcIn)),
-                      ),
                     ),
                   ],
                 ),

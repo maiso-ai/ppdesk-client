@@ -93,18 +93,10 @@ class _DesktopTabPageState extends State<DesktopTabPage> {
   Widget build(BuildContext context) {
     final tabWidget = Container(
         child: Scaffold(
-            backgroundColor: Theme.of(context).colorScheme.background,
+            backgroundColor: Theme.of(context).colorScheme.surface,
             body: DesktopTab(
               controller: tabController,
-              tail: Offstage(
-                offstage: bind.isIncomingOnly() || bind.isDisableSettings(),
-                child: ActionIcon(
-                  message: 'Settings',
-                  icon: IconFont.menu,
-                  onTap: DesktopTabPage.onAddSetting,
-                  isClose: false,
-                ),
-              ),
+              showTabBar: false,
             )));
     return isMacOS || kUseCompatibleUiMode
         ? tabWidget

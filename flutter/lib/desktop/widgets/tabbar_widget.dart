@@ -252,6 +252,7 @@ class DesktopTab extends StatefulWidget {
   final Color? selectedTabBackgroundColor;
   final Color? unSelectedTabBackgroundColor;
   final Color? selectedBorderColor;
+  final bool showTabBar;
 
   final DesktopTabController controller;
 
@@ -277,6 +278,7 @@ class DesktopTab extends StatefulWidget {
     this.selectedTabBackgroundColor,
     this.unSelectedTabBackgroundColor,
     this.selectedBorderColor,
+    this.showTabBar = true,
   }) : super(key: key);
 
   static RxString tablabelGetter(String peerId) {
@@ -512,6 +514,9 @@ class _DesktopTabState extends State<DesktopTab>
   Widget build(BuildContext context) {
     return Column(children: [
       Obx(() {
+        if (!widget.showTabBar && stateGlobal.showTabBar.isTrue) {
+          return _buildBlankBar();
+        }
         if (stateGlobal.showTabBar.isTrue &&
             !(kUseCompatibleUiMode && isHideSingleItem())) {
           final showBottomDivider = _showTabBarBottomDivider(tabType);
@@ -540,6 +545,20 @@ class _DesktopTabState extends State<DesktopTab>
               ? pageViewBuilder!(_buildPageView())
               : _buildPageView())
     ]);
+  }
+
+  Widget _buildBlankBar() {
+    return GestureDetector(
+      onPanStart: (_) => startDragging(isMainWindow),
+      child: Container(
+        height: _kTabBarHeight,
+        color: const Color(0xFFF8FAFF),
+        child: Row(children: [
+          if (isMacOS) const SizedBox(width: 78),
+          const Expanded(child: SizedBox.shrink()),
+        ]),
+      ),
+    );
   }
 
   List<Widget> _tabWidgets = [];
@@ -610,7 +629,9 @@ class _DesktopTabState extends State<DesktopTab>
                               .then((value) => stateGlobal.setMaximized(value));
                         }
                       }
-                    : (isIncomingHomePage ? () {} : null), // Keep tap recognizer for Windows touch.
+                    : (isIncomingHomePage
+                        ? () {}
+                        : null), // Keep tap recognizer for Windows touch.
                 onPanStart: (_) => startDragging(isMainWindow),
                 onPanCancel: () {
                   // We want to disable dragging of the tab area in the tab bar.
