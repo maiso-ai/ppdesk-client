@@ -13,6 +13,7 @@ import 'package:flutter_hbb/common/widgets/animated_rotation_widget.dart';
 import 'package:flutter_hbb/common/widgets/custom_password.dart';
 import 'package:flutter_hbb/common/widgets/dialog.dart' as ppdesk_dialogs;
 import 'package:flutter_hbb/common/widgets/login.dart' as ppdesk_login;
+import 'package:flutter_hbb/common/widgets/setting_widgets.dart';
 import 'package:flutter_hbb/consts.dart';
 import 'package:flutter_hbb/desktop/pages/connection_page.dart';
 import 'package:flutter_hbb/desktop/pages/desktop_setting_page.dart';
@@ -71,6 +72,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   final _ppDeskDeviceSearchFocusNode = FocusNode();
   final _ppDeskSessionSearchController = TextEditingController();
   final _ppDeskSessionSearchFocusNode = FocusNode();
+  final Map<String, String> _ppDeskLangLabels = {};
   final _ppDeskAllPeersLoader = AllPeersLoader();
   final RxBool _ppDeskIdFocused = false.obs;
   Iterable<Peer> _ppDeskAutocompleteOpts = const [];
@@ -1453,7 +1455,8 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               value: _ppDeskLanguageLabel(),
               subtitle: '界面语言配置',
               compact: compact,
-              onTap: () => showToast('语言切换将在后续接入 PPDesk 语言选择器'),
+              disabled: isOptionFixed(kCommConfKeyLang),
+              onTap: _showPPDeskLanguageSelector,
             ),
             _PPDeskSettingSelectRow(
               icon: 'ppdesk_display',
@@ -1707,7 +1710,15 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               value: _ppDeskUserDefaultLabel(kOptionViewStyle),
               subtitle: '远程桌面默认显示模式',
               compact: compact,
-              onTap: () => showToast('视图样式选择器将在后续接入'),
+              disabled: isOptionFixed(kOptionViewStyle),
+              onTap: () => _showPPDeskUserDefaultSelector(
+                title: '视图样式',
+                optionKey: kOptionViewStyle,
+                options: const [
+                  ('原始比例', kRemoteViewStyleOriginal),
+                  ('自适应缩放', kRemoteViewStyleAdaptive),
+                ],
+              ),
             ),
             _PPDeskSettingSelectRow(
               icon: 'ppdesk_scroll',
@@ -1715,7 +1726,16 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               value: _ppDeskUserDefaultLabel(kOptionScrollStyle),
               subtitle: '远程控制中的滚动行为',
               compact: compact,
-              onTap: () => showToast('滚动方式选择器将在后续接入'),
+              disabled: isOptionFixed(kOptionScrollStyle),
+              onTap: () => _showPPDeskUserDefaultSelector(
+                title: '滚动方式',
+                optionKey: kOptionScrollStyle,
+                options: [
+                  ('自动滚动', kRemoteScrollStyleAuto),
+                  ('滚动条', kRemoteScrollStyleBar),
+                  if (!isWeb) ('边缘滚动', kRemoteScrollStyleEdge),
+                ],
+              ),
             ),
             _PPDeskSettingSelectRow(
               icon: 'ppdesk_image',
@@ -1723,7 +1743,19 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               value: _ppDeskUserDefaultLabel(kOptionImageQuality),
               subtitle: '画质与流畅度的默认策略',
               compact: compact,
-              onTap: () => showToast('图像质量选择器将在后续接入'),
+              disabled: isOptionFixed(kOptionImageQuality),
+              onTap: () => _showPPDeskUserDefaultSelector(
+                title: '图像质量',
+                optionKey: kOptionImageQuality,
+                options: const [
+                  ('优先画质', kRemoteImageQualityBest),
+                  ('平衡', kRemoteImageQualityBalanced),
+                  ('速度最优化', kRemoteImageQualityLow),
+                  ('自定义', kRemoteImageQualityCustom),
+                ],
+                keepOpenValue: kRemoteImageQualityCustom,
+                tailBuilder: (_) => customImageQualitySetting(),
+              ),
             ),
             _PPDeskSettingSelectRow(
               icon: 'ppdesk_codec',
@@ -1731,7 +1763,12 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               value: _ppDeskUserDefaultLabel(kOptionCodecPreference),
               subtitle: '会话视频编解码默认选择',
               compact: compact,
-              onTap: () => showToast('编解码偏好选择器将在后续接入'),
+              disabled: isOptionFixed(kOptionCodecPreference),
+              onTap: () => _showPPDeskUserDefaultSelector(
+                title: '编解码偏好',
+                optionKey: kOptionCodecPreference,
+                options: _ppDeskCodecOptions(),
+              ),
             ),
           ],
         ),
@@ -1888,7 +1925,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     if (lang.isEmpty || lang == defaultOptionLang) {
       return '跟随系统';
     }
-    return lang;
+    return _ppDeskLangLabels[lang] ?? lang;
   }
 
   String _ppDeskThemeLabel() {
@@ -1931,12 +1968,214 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     if (mounted) setState(() {});
   }
 
+  Future<void> _showPPDeskLanguageSelector() async {
+    if (isOptionFixed(kCommConfKeyLang)) return;
+    final langs = jsonDecode(await bind.mainGetLangs()) as List<dynamic>;
+    final options = <(String, String)>[
+      ('跟随系统', defaultOptionLang),
+      ...langs.map((e) {
+        final row = e as List<dynamic>;
+        return (row[1] as String, row[0] as String);
+      }),
+    ];
+    _ppDeskLangLabels
+      ..clear()
+      ..addEntries(options.map((e) => MapEntry(e.$2, e.$1)));
+    var selected = bind.mainGetLocalOption(key: kCommConfKeyLang);
+    if (!options.any((e) => e.$2 == selected)) {
+      selected = defaultOptionLang;
+    }
+    await _showPPDeskSelectorDialog(
+      title: '语言',
+      selectedValue: selected,
+      options: options,
+      onSelected: (value) async {
+        await bind.mainSetLocalOption(key: kCommConfKeyLang, value: value);
+        if (isWeb) {
+          reloadCurrentWindow();
+        } else {
+          reloadAllWindows();
+          bind.mainChangeLanguage(lang: value);
+        }
+      },
+    );
+  }
+
+  Future<void> _showPPDeskUserDefaultSelector({
+    required String title,
+    required String optionKey,
+    required List<(String, String)> options,
+    String? keepOpenValue,
+    Widget Function(String selected)? tailBuilder,
+  }) async {
+    if (isOptionFixed(optionKey)) return;
+    var selected = bind.mainGetUserDefaultOption(key: optionKey);
+    if (!options.any((e) => e.$2 == selected)) {
+      selected = options.first.$2;
+    }
+    await _showPPDeskSelectorDialog(
+      title: title,
+      selectedValue: selected,
+      options: options,
+      keepOpenValue: keepOpenValue,
+      tailBuilder: tailBuilder,
+      onSelected: (value) async {
+        await bind.mainSetUserDefaultOption(key: optionKey, value: value);
+      },
+    );
+  }
+
+  Future<void> _showPPDeskSelectorDialog({
+    required String title,
+    required String selectedValue,
+    required List<(String, String)> options,
+    required Future<void> Function(String value) onSelected,
+    String? keepOpenValue,
+    Widget Function(String selected)? tailBuilder,
+  }) async {
+    var selected = selectedValue;
+    await gFFI.dialogManager.show((dialogSetState, close, context) {
+      Future<void> choose(String value) async {
+        selected = value;
+        await onSelected(value);
+        if (mounted) setState(() {});
+        dialogSetState(() {});
+        if (value != keepOpenValue) close();
+      }
+
+      return CustomAlertDialog(
+        title: _ppdeskDialogTitle(icon: Icons.tune_rounded, text: title),
+        contentBoxConstraints: const BoxConstraints(maxWidth: 440),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ...options.map((e) => _ppDeskSelectorTile(
+                  label: e.$1,
+                  selected: selected == e.$2,
+                  onTap: () => choose(e.$2),
+                )),
+            if (tailBuilder != null && selected == keepOpenValue)
+              Container(
+                margin: const EdgeInsets.only(top: 12),
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF7FAFF),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFDCE6F4)),
+                ),
+                child: tailBuilder(selected),
+              ),
+          ],
+        ),
+        actions: [
+          dialogButton('Close', onPressed: close, isOutline: true),
+        ],
+        onCancel: close,
+      );
+    });
+  }
+
+  Widget _ppDeskSelectorTile({
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      hoverColor: const Color(0xFFEAF0FF),
+      child: Container(
+        height: 44,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFFEAF0FF) : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: selected
+                      ? const Color(0xFF2D6BFF)
+                      : const Color(0xFF101828),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            if (selected)
+              const Icon(Icons.check_rounded,
+                  color: Color(0xFF2D6BFF), size: 18),
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<(String, String)> _ppDeskCodecOptions() {
+    final options = <(String, String)>[
+      ('自动', 'auto'),
+      ('VP8', 'vp8'),
+      ('VP9', 'vp9'),
+      ('AV1', 'av1'),
+    ];
+    try {
+      final codecs = jsonDecode(bind.mainSupportedHwdecodings()) as Map;
+      if (codecs['h264'] == true) options.add(('H264', 'h264'));
+      if (codecs['h265'] == true) options.add(('H265', 'h265'));
+    } catch (e) {
+      debugPrint('failed to parse supported hwdecodings, err=$e');
+    }
+    return options;
+  }
+
   String _ppDeskUserDefaultLabel(String key) {
     final value = bind.mainGetUserDefaultOption(key: key);
     if (value.isEmpty ||
         value == defaultOptionNo ||
         value == defaultOptionYes) {
       return '默认';
+    }
+    return _ppDeskUserDefaultValueLabel(key, value);
+  }
+
+  String _ppDeskUserDefaultValueLabel(String key, String value) {
+    if (key == kOptionViewStyle) {
+      return switch (value) {
+        kRemoteViewStyleOriginal => '原始比例',
+        kRemoteViewStyleAdaptive => '自适应缩放',
+        _ => value,
+      };
+    }
+    if (key == kOptionScrollStyle) {
+      return switch (value) {
+        kRemoteScrollStyleAuto => '自动滚动',
+        kRemoteScrollStyleBar => '滚动条',
+        kRemoteScrollStyleEdge => '边缘滚动',
+        _ => value,
+      };
+    }
+    if (key == kOptionImageQuality) {
+      return switch (value) {
+        kRemoteImageQualityBest => '优先画质',
+        kRemoteImageQualityBalanced => '平衡',
+        kRemoteImageQualityLow => '速度最优化',
+        kRemoteImageQualityCustom => '自定义',
+        _ => value,
+      };
+    }
+    if (key == kOptionCodecPreference) {
+      return switch (value) {
+        'auto' => '自动',
+        'vp8' => 'VP8',
+        'vp9' => 'VP9',
+        'av1' => 'AV1',
+        'h264' => 'H264',
+        'h265' => 'H265',
+        _ => value,
+      };
     }
     return value;
   }
