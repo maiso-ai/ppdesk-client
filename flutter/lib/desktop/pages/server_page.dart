@@ -22,6 +22,21 @@ import '../../models/file_model.dart';
 import '../../models/platform_model.dart';
 import '../../models/server_model.dart';
 
+const _ppDeskText = Color(0xFF101828);
+const _ppDeskSubText = Color(0xFF667085);
+const _ppDeskBorder = Color(0xFFDDE6F4);
+const _ppDeskBlue = Color(0xFF2670FF);
+const _ppDeskPurple = Color(0xFF7336FF);
+
+Widget _ppDeskSvg(String name, {required Color color, double size = 24}) {
+  return SvgPicture.asset(
+    'assets/$name.svg',
+    width: size,
+    height: size,
+    colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+  );
+}
+
 class DesktopServerPage extends StatefulWidget {
   const DesktopServerPage({Key? key}) : super(key: key);
 
@@ -83,7 +98,7 @@ class _DesktopServerPageState extends State<DesktopServerPage>
       child: Consumer<ServerModel>(
         builder: (context, serverModel, child) {
           final body = Scaffold(
-            backgroundColor: Theme.of(context).colorScheme.background,
+            backgroundColor: Theme.of(context).colorScheme.surface,
             body: ConnectionManager(),
           );
           return isLinux
@@ -295,7 +310,7 @@ class ConnectionManagerState extends State<ConnectionManager>
                 windowManager.startDragging();
               },
               child: Container(
-                color: Theme.of(context).colorScheme.background,
+                color: Theme.of(context).colorScheme.surface,
               ),
             ),
           ),
@@ -366,7 +381,7 @@ Widget buildConnectionCard(Client client) {
           ),
         )
       ],
-    ).paddingSymmetric(vertical: 4.0, horizontal: 8.0),
+    ).paddingSymmetric(vertical: 6.0, horizontal: 10.0),
   );
 }
 
@@ -442,78 +457,90 @@ class _CmHeaderState extends State<_CmHeader>
     super.build(context);
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10.0),
+        borderRadius: BorderRadius.circular(22.0),
         gradient: LinearGradient(
-          begin: Alignment.topRight,
-          end: Alignment.bottomLeft,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
           colors: [
-            Color(0xff00bfe1),
-            Color(0xff0071ff),
+            Color(0xFFF8FBFF),
+            Color(0xFFF1F4FF),
           ],
         ),
+        border: Border.all(color: _ppDeskBorder),
       ),
-      margin: EdgeInsets.symmetric(horizontal: 5.0, vertical: 10.0),
+      margin: EdgeInsets.only(bottom: 10.0),
       padding: EdgeInsets.only(
-        top: 10.0,
-        bottom: 10.0,
-        left: 10.0,
-        right: 5.0,
+        top: 16.0,
+        bottom: 16.0,
+        left: 16.0,
+        right: 12.0,
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          _buildClientAvatar().marginOnly(right: 10.0),
+          _buildClientAvatar().marginOnly(right: 14.0),
           Expanded(
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 FittedBox(
                     child: Text(
                   client.name,
                   style: TextStyle(
-                    color: Colors.white,
+                    color: _ppDeskText,
                     fontWeight: FontWeight.bold,
-                    fontSize: 20,
+                    fontSize: 25,
                     overflow: TextOverflow.ellipsis,
                   ),
                   maxLines: 1,
                 )),
-                FittedBox(
-                  child: Text(
-                    "(${client.peerId})",
-                    style: TextStyle(color: Colors.white, fontSize: 14),
+                Container(
+                  margin: EdgeInsets.only(top: 5.0, bottom: 8.0),
+                  padding: EdgeInsets.symmetric(horizontal: 9.0, vertical: 4.0),
+                  decoration: BoxDecoration(
+                    color: Color(0xFFE7F0FF),
+                    borderRadius: BorderRadius.circular(8.0),
+                  ),
+                  child: FittedBox(
+                    child: Text(
+                      client.peerId,
+                      style: TextStyle(
+                        color: _ppDeskBlue,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
                 ),
                 if (client.type_() == ClientType.terminal)
                   FittedBox(
                     child: Text(
                       translate("Terminal"),
-                      style: TextStyle(color: Colors.white70, fontSize: 12),
+                      style: TextStyle(color: _ppDeskSubText, fontSize: 12),
                     ),
                   ),
                 if (client.type_() == ClientType.file)
                   FittedBox(
                     child: Text(
                       translate("File Transfer"),
-                      style: TextStyle(color: Colors.white70, fontSize: 12),
+                      style: TextStyle(color: _ppDeskSubText, fontSize: 12),
                     ),
                   ),
                 if (client.type_() == ClientType.camera)
                   FittedBox(
                     child: Text(
                       translate("View Camera"),
-                      style: TextStyle(color: Colors.white70, fontSize: 12),
+                      style: TextStyle(color: _ppDeskSubText, fontSize: 12),
                     ),
                   ),
                 if (client.portForward.isNotEmpty)
                   FittedBox(
                     child: Text(
                       "Port Forward: ${client.portForward}",
-                      style: TextStyle(color: Colors.white70, fontSize: 12),
+                      style: TextStyle(color: _ppDeskSubText, fontSize: 12),
                     ),
                   ),
-                SizedBox(height: 10.0),
                 FittedBox(
                     child: Row(
                   children: [
@@ -522,8 +549,12 @@ class _CmHeaderState extends State<_CmHeader>
                           ? client.disconnected
                               ? translate("Disconnected")
                               : translate("Connected")
-                          : "${translate("Request access to your device")}...",
-                      style: TextStyle(color: Colors.white),
+                          : '请求访问你的设备',
+                      style: TextStyle(
+                        color: _ppDeskSubText,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ).marginOnly(right: 8.0),
                     if (client.authorized)
                       Obx(
@@ -531,7 +562,7 @@ class _CmHeaderState extends State<_CmHeader>
                           formatDurationToTime(
                             Duration(seconds: _time.value),
                           ),
-                          style: TextStyle(color: Colors.white),
+                          style: TextStyle(color: _ppDeskSubText),
                         ),
                       )
                   ],
@@ -557,6 +588,9 @@ class _CmHeaderState extends State<_CmHeader>
                   ? 'assets/file_transfer.svg'
                   : 'assets/chat2.svg'),
               splashRadius: kDesktopIconButtonSplashRadius,
+              splashColor: Colors.transparent,
+              hoverColor: Colors.transparent,
+              highlightColor: Colors.transparent,
             ),
           )
         ],
@@ -570,8 +604,8 @@ class _CmHeaderState extends State<_CmHeader>
   Widget _buildClientAvatar() {
     return buildAvatarWidget(
           avatar: client.avatar,
-          size: 70,
-          borderRadius: 15,
+          size: 82,
+          borderRadius: 20,
           fallback: _buildInitialAvatar(),
         ) ??
         _buildInitialAvatar();
@@ -579,19 +613,23 @@ class _CmHeaderState extends State<_CmHeader>
 
   Widget _buildInitialAvatar() {
     return Container(
-      width: 70,
-      height: 70,
+      width: 82,
+      height: 82,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: str2color(client.name),
-        borderRadius: BorderRadius.circular(15.0),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: const [_ppDeskBlue, _ppDeskPurple],
+        ),
+        borderRadius: BorderRadius.circular(20.0),
       ),
       child: Text(
         client.name.isNotEmpty ? client.name[0] : '?',
         style: TextStyle(
           fontWeight: FontWeight.bold,
           color: Colors.white,
-          fontSize: 55,
+          fontSize: 50,
         ),
       ),
     );
@@ -609,33 +647,58 @@ class _PrivilegeBoard extends StatefulWidget {
 
 class _PrivilegeBoardState extends State<_PrivilegeBoard> {
   late final client = widget.client;
-  Widget buildPermissionIcon(bool enabled, IconData iconData,
-      Function(bool)? onTap, String tooltipText,
-      {required bool canModify}) {
+
+  Widget buildPermissionIcon({
+    required bool enabled,
+    required String icon,
+    required String label,
+    required Function(bool)? onTap,
+    required bool canModify,
+  }) {
     return Tooltip(
-      message: "$tooltipText: ${enabled ? "ON" : "OFF"}",
+      message: "$label: ${enabled ? "ON" : "OFF"}",
       waitDuration: Duration.zero,
-      child: Container(
-        decoration: BoxDecoration(
-          color: enabled
-              ? (canModify ? MyTheme.accent : MyTheme.accent.withOpacity(0.6))
-              : Colors.grey[700],
-          borderRadius: BorderRadius.circular(10.0),
-        ),
-        padding: EdgeInsets.all(8.0),
-        child: InkWell(
-          onTap: canModify
-              ? () =>
-                  checkClickTime(widget.client.id, () => onTap?.call(!enabled))
-              : null,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: canModify
+            ? () =>
+                checkClickTime(widget.client.id, () => onTap?.call(!enabled))
+            : null,
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: 7.0, vertical: 8.0),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16.0),
+            border: Border.all(
+              color: enabled
+                  ? _ppDeskBlue.withValues(alpha: canModify ? 0.28 : 0.16)
+                  : _ppDeskBorder,
+            ),
+          ),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Expanded(
-                child: Icon(
-                  iconData,
-                  color: Colors.white,
+              _ppDeskSvg(
+                icon,
+                color: enabled ? _ppDeskBlue : Color(0xFF98A2B3),
+                size: 27,
+              ),
+              SizedBox(height: 5.0),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: _ppDeskText,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
                 ),
+              ),
+              SizedBox(height: 6.0),
+              _PpDeskPermissionSwitch(
+                enabled: enabled,
+                disabled: !canModify,
               ),
             ],
           ),
@@ -647,47 +710,80 @@ class _PrivilegeBoardState extends State<_PrivilegeBoard> {
   @override
   Widget build(BuildContext context) {
     final crossAxisCount = 4;
-    final spacing = 10.0;
+    final spacing = 8.0;
     final canModifyPermission =
         bind.mainGetBuildinOption(key: kOptionEnablePermChangeInAcceptWindow) !=
             'N';
     return Container(
       width: double.infinity,
-      height: 160.0,
-      margin: EdgeInsets.all(5.0),
-      padding: EdgeInsets.all(5.0),
+      height: client.type_() == ClientType.camera ? 154.0 : 258.0,
+      margin: EdgeInsets.only(bottom: 8.0),
+      padding: EdgeInsets.symmetric(horizontal: 4.0),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10.0),
-        color: Theme.of(context).colorScheme.background,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            spreadRadius: 1,
-            blurRadius: 1,
-            offset: Offset(0, 1.5),
-          ),
-        ],
+        color: Colors.transparent,
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            translate("Permissions"),
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            textAlign: TextAlign.center,
-          ).marginOnly(left: 4.0, bottom: 8.0),
+          Row(
+            children: [
+              Container(
+                width: 30,
+                height: 30,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: const [_ppDeskBlue, _ppDeskPurple],
+                  ),
+                  borderRadius: BorderRadius.circular(10.0),
+                ),
+                child:
+                    _ppDeskSvg('ppdesk_shield', color: Colors.white, size: 18),
+              ).marginOnly(right: 8.0),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '请求的权限',
+                      style: TextStyle(
+                        color: _ppDeskText,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    Text(
+                      '对方连接后将获得以下权限',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: _ppDeskSubText,
+                        fontSize: 11.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ).marginOnly(bottom: 8.0),
+          Divider(height: 1, color: _ppDeskBorder).marginOnly(bottom: 8.0),
           Expanded(
             child: GridView.count(
               crossAxisCount: crossAxisCount,
-              padding: EdgeInsets.symmetric(horizontal: spacing),
+              physics: NeverScrollableScrollPhysics(),
+              padding: EdgeInsets.zero,
               mainAxisSpacing: spacing,
               crossAxisSpacing: spacing,
+              childAspectRatio: 0.9,
               children: client.type_() == ClientType.camera
                   ? [
                       buildPermissionIcon(
-                        client.audio,
-                        Icons.volume_up_rounded,
-                        (enabled) {
+                        enabled: client.audio,
+                        icon: 'ppdesk_volume',
+                        label: '声音',
+                        onTap: (enabled) {
                           bind.cmSwitchPermission(
                               connId: client.id,
                               name: "audio",
@@ -696,13 +792,13 @@ class _PrivilegeBoardState extends State<_PrivilegeBoard> {
                             client.audio = enabled;
                           });
                         },
-                        translate('Enable audio'),
                         canModify: canModifyPermission,
                       ),
                       buildPermissionIcon(
-                        client.recording,
-                        Icons.videocam_rounded,
-                        (enabled) {
+                        enabled: client.recording,
+                        icon: 'ppdesk_video',
+                        label: '视频画面',
+                        onTap: (enabled) {
                           bind.cmSwitchPermission(
                               connId: client.id,
                               name: "recording",
@@ -711,15 +807,15 @@ class _PrivilegeBoardState extends State<_PrivilegeBoard> {
                             client.recording = enabled;
                           });
                         },
-                        translate('Enable recording session'),
                         canModify: canModifyPermission,
                       ),
                     ]
                   : [
                       buildPermissionIcon(
-                        client.keyboard,
-                        Icons.keyboard,
-                        (enabled) {
+                        enabled: client.keyboard,
+                        icon: 'ppdesk_keyboard',
+                        label: '键盘鼠标',
+                        onTap: (enabled) {
                           bind.cmSwitchPermission(
                               connId: client.id,
                               name: "keyboard",
@@ -728,13 +824,13 @@ class _PrivilegeBoardState extends State<_PrivilegeBoard> {
                             client.keyboard = enabled;
                           });
                         },
-                        translate('Enable keyboard/mouse'),
                         canModify: canModifyPermission,
                       ),
                       buildPermissionIcon(
-                        client.clipboard,
-                        Icons.assignment_rounded,
-                        (enabled) {
+                        enabled: client.clipboard,
+                        icon: 'ppdesk_clipboard',
+                        label: '剪贴板',
+                        onTap: (enabled) {
                           bind.cmSwitchPermission(
                               connId: client.id,
                               name: "clipboard",
@@ -743,13 +839,13 @@ class _PrivilegeBoardState extends State<_PrivilegeBoard> {
                             client.clipboard = enabled;
                           });
                         },
-                        translate('Enable clipboard'),
                         canModify: canModifyPermission,
                       ),
                       buildPermissionIcon(
-                        client.audio,
-                        Icons.volume_up_rounded,
-                        (enabled) {
+                        enabled: client.audio,
+                        icon: 'ppdesk_volume',
+                        label: '声音',
+                        onTap: (enabled) {
                           bind.cmSwitchPermission(
                               connId: client.id,
                               name: "audio",
@@ -758,13 +854,13 @@ class _PrivilegeBoardState extends State<_PrivilegeBoard> {
                             client.audio = enabled;
                           });
                         },
-                        translate('Enable audio'),
                         canModify: canModifyPermission,
                       ),
                       buildPermissionIcon(
-                        client.file,
-                        Icons.upload_file_rounded,
-                        (enabled) {
+                        enabled: client.file,
+                        icon: 'ppdesk_file',
+                        label: '文件传输',
+                        onTap: (enabled) {
                           bind.cmSwitchPermission(
                               connId: client.id,
                               name: "file",
@@ -773,13 +869,13 @@ class _PrivilegeBoardState extends State<_PrivilegeBoard> {
                             client.file = enabled;
                           });
                         },
-                        translate('Enable file copy and paste'),
                         canModify: canModifyPermission,
                       ),
                       buildPermissionIcon(
-                        client.restart,
-                        Icons.restart_alt_rounded,
-                        (enabled) {
+                        enabled: client.restart,
+                        icon: 'ppdesk_restart',
+                        label: '重启设备',
+                        onTap: (enabled) {
                           bind.cmSwitchPermission(
                               connId: client.id,
                               name: "restart",
@@ -788,13 +884,13 @@ class _PrivilegeBoardState extends State<_PrivilegeBoard> {
                             client.restart = enabled;
                           });
                         },
-                        translate('Enable remote restart'),
                         canModify: canModifyPermission,
                       ),
                       buildPermissionIcon(
-                        client.recording,
-                        Icons.videocam_rounded,
-                        (enabled) {
+                        enabled: client.recording,
+                        icon: 'ppdesk_video',
+                        label: '视频画面',
+                        onTap: (enabled) {
                           bind.cmSwitchPermission(
                               connId: client.id,
                               name: "recording",
@@ -803,15 +899,15 @@ class _PrivilegeBoardState extends State<_PrivilegeBoard> {
                             client.recording = enabled;
                           });
                         },
-                        translate('Enable recording session'),
                         canModify: canModifyPermission,
                       ),
                       // only windows support block input
                       if (isWindows)
                         buildPermissionIcon(
-                          client.blockInput,
-                          Icons.block,
-                          (enabled) {
+                          enabled: client.blockInput,
+                          icon: 'ppdesk_lock',
+                          label: '锁定输入',
+                          onTap: (enabled) {
                             bind.cmSwitchPermission(
                                 connId: client.id,
                                 name: "block_input",
@@ -820,14 +916,14 @@ class _PrivilegeBoardState extends State<_PrivilegeBoard> {
                               client.blockInput = enabled;
                             });
                           },
-                          translate('Enable blocking user input'),
                           canModify: canModifyPermission,
                         ),
                       if (bind.mainSupportedPrivacyModeImpls() != '[]')
                         buildPermissionIcon(
-                          client.privacyMode,
-                          Icons.visibility_off,
-                          (enabled) {
+                          enabled: client.privacyMode,
+                          icon: 'ppdesk_privacy',
+                          label: '隐私模式',
+                          onTap: (enabled) {
                             bind.cmSwitchPermission(
                                 connId: client.id,
                                 name: "privacy_mode",
@@ -836,13 +932,50 @@ class _PrivilegeBoardState extends State<_PrivilegeBoard> {
                               client.privacyMode = enabled;
                             });
                           },
-                          translate('Enable privacy mode'),
                           canModify: canModifyPermission,
                         )
                     ],
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _PpDeskPermissionSwitch extends StatelessWidget {
+  final bool enabled;
+  final bool disabled;
+
+  const _PpDeskPermissionSwitch({
+    Key? key,
+    required this.enabled,
+    required this.disabled,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = enabled
+        ? (disabled ? _ppDeskBlue.withValues(alpha: 0.45) : _ppDeskBlue)
+        : Color(0xFFD8DFEA);
+    return Container(
+      width: 34,
+      height: 18,
+      padding: EdgeInsets.all(2.0),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Align(
+        alignment: enabled ? Alignment.centerRight : Alignment.centerLeft,
+        child: Container(
+          width: 14,
+          height: 14,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+          ),
+        ),
       ),
     );
   }
@@ -914,8 +1047,9 @@ class _CmControlPanel extends StatelessWidget {
                                 value: d,
                                 groupValue: currentDevice,
                                 onChanged: (v) {
-                                  if (v != null)
+                                  if (v != null) {
                                     AudioInput.setDevice(v, true, true);
+                                  }
                                 },
                                 child: Container(
                                   child: Text(
@@ -1070,12 +1204,8 @@ class _CmControlPanel extends StatelessWidget {
             handleElevate(context);
             windowManager.minimize();
           },
-              text: 'Accept and Elevate',
-              icon: Icon(
-                Icons.security_rounded,
-                color: Colors.white,
-                size: 14,
-              ),
+              text: '接受并提权',
+              icon: _ppDeskSvg('ppdesk_shield', color: Colors.white, size: 16),
               textColor: Colors.white,
               tooltip: 'accept_and_elevate_btn_tooltip'),
         ),
@@ -1093,7 +1223,9 @@ class _CmControlPanel extends StatelessWidget {
                         handleAccept(context);
                         windowManager.minimize();
                       },
-                      text: 'Accept',
+                      icon: _ppDeskSvg('ppdesk_check',
+                          color: Colors.white, size: 18),
+                      text: '接受',
                       textColor: Colors.white,
                     ),
                   ],
@@ -1103,10 +1235,11 @@ class _CmControlPanel extends StatelessWidget {
               child: buildButton(
                 context,
                 color: Colors.transparent,
-                border: Border.all(color: Colors.grey),
+                border: Border.all(color: _ppDeskBlue),
                 onClick: handleDisconnect,
-                text: 'Cancel',
-                textColor: null,
+                icon: _ppDeskSvg('ppdesk_close', color: _ppDeskBlue, size: 17),
+                text: '取消',
+                textColor: _ppDeskText,
               ),
             ),
           ],
@@ -1142,12 +1275,22 @@ class _CmControlPanel extends StatelessWidget {
       );
     }
     final borderRadius = BorderRadius.circular(10.0);
+    final isTransparent = color == Colors.transparent || color == null;
     final btn = Container(
-      height: 28,
+      height: 42,
       decoration: BoxDecoration(
-          color: color, borderRadius: borderRadius, border: border),
-      child: InkWell(
-        borderRadius: borderRadius,
+          color: isTransparent ? Colors.white : color,
+          gradient: color == MyTheme.accent
+              ? LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: const [_ppDeskBlue, _ppDeskPurple],
+                )
+              : null,
+          borderRadius: borderRadius,
+          border: border ?? Border.all(color: Colors.transparent)),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: () {
           if (onClick == null) return;
           checkClickTime(client.id, onClick);
