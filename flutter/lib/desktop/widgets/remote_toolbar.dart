@@ -934,6 +934,483 @@ class _RemoteToolbarState extends State<RemoteToolbar> {
   }
 }
 
+class PPDeskRemoteTopToolbar extends StatefulWidget {
+  final String id;
+  final FFI ffi;
+  final ToolbarState state;
+  final Function(bool) setFullscreen;
+
+  const PPDeskRemoteTopToolbar({
+    Key? key,
+    required this.id,
+    required this.ffi,
+    required this.state,
+    required this.setFullscreen,
+  }) : super(key: key);
+
+  @override
+  State<PPDeskRemoteTopToolbar> createState() => _PPDeskRemoteTopToolbarState();
+}
+
+class _PPDeskRemoteTopToolbarState extends State<PPDeskRemoteTopToolbar> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      widget.state.init(widget.ffi.sessionId);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<FfiModel>(
+      builder: (context, model, _) {
+        final pi = model.pi;
+        final title = _ppDeskRemoteTitle(pi, widget.id);
+        return Material(
+          color: const Color(0xFFF8FAFF),
+          child: Container(
+            height: 56,
+            padding: const EdgeInsets.symmetric(horizontal: 18),
+            decoration: const BoxDecoration(
+              border: Border(
+                bottom: BorderSide(color: Color(0xFFE3E9F5), width: 1),
+              ),
+            ),
+            child: Theme(
+              data: _ppDeskToolbarTheme(context),
+              child: Row(
+                children: [
+                  SvgPicture.asset(
+                    'assets/screen.svg',
+                    width: 20,
+                    height: 20,
+                    colorFilter: const ColorFilter.mode(
+                        Color(0xFF2D6BFF), BlendMode.srcIn),
+                  ),
+                  const SizedBox(width: 10),
+                  Flexible(
+                    child: Text(
+                      title,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(0xFF101828),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Obx(() => Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: pi.isSet.isTrue
+                              ? const Color(0xFF20C56B)
+                              : const Color(0xFF98A2B3),
+                          shape: BoxShape.circle,
+                        ),
+                      )),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      reverse: true,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _PPDeskFullscreenButton(
+                              setFullscreen: widget.setFullscreen),
+                          Obx(() {
+                            final privacyModeState =
+                                PrivacyModeState.find(widget.id);
+                            if ((privacyModeState.isEmpty ||
+                                    allowDisplaySwitchInPrivacyMode(
+                                        pi, privacyModeState.value)) &&
+                                pi.displaysCount.value > 1 &&
+                                mainGetLocalBoolOptionSync(
+                                    kOptionAllowMonitorSwitchMainToolbar)) {
+                              return _MainMonitorSwitchButton(
+                                  id: widget.id, ffi: widget.ffi);
+                            }
+                            return const Offstage();
+                          }),
+                          if (!isWebDesktop) _MobileActionMenu(ffi: widget.ffi),
+                          _DisplayMenu(
+                            id: widget.id,
+                            ffi: widget.ffi,
+                            state: widget.state,
+                            setFullscreen: widget.setFullscreen,
+                          ),
+                          _PPDeskTopKeyboardMenu(
+                              id: widget.id, ffi: widget.ffi),
+                          _PPDeskTopAction(
+                            label: '文件传输',
+                            assetName: 'assets/file_transfer.svg',
+                            onPressed:
+                                widget.ffi.connType == ConnType.defaultConn &&
+                                        isDesktop
+                                    ? () => _ppDeskConnectWithToken(
+                                        context, widget.id, widget.ffi,
+                                        isFileTransfer: true)
+                                    : null,
+                          ),
+                          _PPDeskTopAction(
+                            label: '聊天',
+                            assetName: 'assets/chat.svg',
+                            onPressed: () => _ppDeskToggleChat(widget.ffi),
+                          ),
+                          if (!isWeb)
+                            _VoiceCallMenu(id: widget.id, ffi: widget.ffi),
+                          if (!isWeb) const _RecordMenu(),
+                          _PPDeskTopAction(
+                            label: '截图',
+                            assetName: 'assets/ppdesk_crop.svg',
+                            onPressed: _ppDeskCanTakeScreenshot(widget.ffi)
+                                ? () => _ppDeskTakeScreenshot(widget.ffi)
+                                : null,
+                          ),
+                          _PPDeskTopMoreMenu(id: widget.id, ffi: widget.ffi),
+                          _PPDeskTopAction(
+                            label: '断开连接',
+                            assetName: 'assets/close.svg',
+                            danger: true,
+                            onPressed: () async {
+                              if (await showConnEndAuditDialogCloseCanceled(
+                                  ffi: widget.ffi)) {
+                                return;
+                              }
+                              closeConnection(id: widget.id);
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+ThemeData _ppDeskToolbarTheme(BuildContext context) {
+  return Theme.of(context).copyWith(
+    menuButtonTheme: MenuButtonThemeData(
+      style: ButtonStyle(
+        minimumSize: const MaterialStatePropertyAll(Size(0, 0)),
+        padding: const MaterialStatePropertyAll(EdgeInsets.zero),
+        overlayColor: const MaterialStatePropertyAll(Colors.transparent),
+        shape: MaterialStatePropertyAll(
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+      ),
+    ),
+    menuBarTheme: const MenuBarThemeData(
+      style: MenuStyle(
+        elevation: MaterialStatePropertyAll(0),
+        padding: MaterialStatePropertyAll(EdgeInsets.zero),
+        backgroundColor: MaterialStatePropertyAll(Colors.transparent),
+      ),
+    ),
+  );
+}
+
+String _ppDeskRemoteTitle(PeerInfo pi, String id) {
+  if (pi.hostname.isNotEmpty && pi.username.isNotEmpty) {
+    return '${pi.username} - ${pi.hostname}';
+  }
+  if (pi.hostname.isNotEmpty) return pi.hostname;
+  if (pi.username.isNotEmpty) return pi.username;
+  return id;
+}
+
+class _PPDeskFullscreenButton extends StatelessWidget {
+  final Function(bool) setFullscreen;
+  const _PPDeskFullscreenButton({required this.setFullscreen});
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final fullscreen = stateGlobal.fullscreen.value;
+      return _PPDeskTopAction(
+        label: fullscreen ? '退出全屏' : '全屏',
+        assetName:
+            fullscreen ? 'assets/fullscreen_exit.svg' : 'assets/fullscreen.svg',
+        onPressed: () => setFullscreen(!fullscreen),
+      );
+    });
+  }
+}
+
+class _PPDeskTopKeyboardMenu extends _KeyboardMenu {
+  _PPDeskTopKeyboardMenu({Key? key, required super.id, required super.ffi})
+      : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final ffiModel = Provider.of<FfiModel>(context);
+    if (!ffiModel.keyboard) return const Offstage();
+    final sessionFfi = super.ffi;
+    toolbarToggles() {
+      final toggles = toolbarKeyboardToggles(sessionFfi)
+          .map((e) => CkbMenuButton(
+              value: e.value,
+              onChanged: e.onChanged,
+              child: e.child,
+              ffi: sessionFfi) as Widget)
+          .toList();
+      if (toggles.isNotEmpty) {
+        toggles.add(const Divider());
+      }
+      return toggles;
+    }
+
+    return _PPDeskTopSubmenu(
+      label: '键盘',
+      assetName: 'assets/keyboard_mouse.svg',
+      ffi: sessionFfi,
+      menuChildrenGetter: (_) => [
+        keyboardMode(),
+        localKeyboardType(),
+        inputSource(),
+        const Divider(),
+        viewMode(),
+        if ([kPeerPlatformWindows, kPeerPlatformMacOS, kPeerPlatformLinux]
+            .contains(pi.platform))
+          showMyCursor(),
+        const Divider(),
+        ...toolbarToggles(),
+        ...mouseSpeed(),
+        ...mobileActions(),
+      ],
+    );
+  }
+}
+
+class _PPDeskTopMoreMenu extends StatelessWidget {
+  final String id;
+  final FFI ffi;
+  const _PPDeskTopMoreMenu({required this.id, required this.ffi});
+
+  @override
+  Widget build(BuildContext context) {
+    return _PPDeskTopSubmenu(
+      label: '更多',
+      assetName: 'assets/ppdesk_more.svg',
+      ffi: ffi,
+      menuChildrenGetter: (_) => toolbarControls(context, id, ffi).map((e) {
+        if (e.divider) return const Divider();
+        return MenuButton(
+          child: e.child,
+          onPressed: e.onPressed,
+          ffi: ffi,
+          trailingIcon: e.trailingIcon,
+        );
+      }).toList(),
+    );
+  }
+}
+
+class _PPDeskTopSubmenu extends StatefulWidget {
+  final String label;
+  final String assetName;
+  final FFI ffi;
+  final List<Widget> Function(BuildContext context) menuChildrenGetter;
+
+  const _PPDeskTopSubmenu({
+    required this.label,
+    required this.assetName,
+    required this.ffi,
+    required this.menuChildrenGetter,
+  });
+
+  @override
+  State<_PPDeskTopSubmenu> createState() => _PPDeskTopSubmenuState();
+}
+
+class _PPDeskTopSubmenuState extends State<_PPDeskTopSubmenu> {
+  bool hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return SubmenuButton(
+      menuStyle: _ToolbarTheme.defaultMenuStyle(context),
+      style: _ppDeskTopButtonStyle,
+      onHover: (value) => setState(() => hover = value),
+      menuChildren: widget
+          .menuChildrenGetter(context)
+          .map((e) => _buildPointerTrackWidget(e, widget.ffi))
+          .toList(),
+      child: _PPDeskTopButtonChrome(
+        label: widget.label,
+        assetName: widget.assetName,
+        hover: hover,
+      ),
+    );
+  }
+}
+
+class _PPDeskTopAction extends StatefulWidget {
+  final String label;
+  final String assetName;
+  final VoidCallback? onPressed;
+  final bool danger;
+
+  const _PPDeskTopAction({
+    required this.label,
+    required this.assetName,
+    required this.onPressed,
+    this.danger = false,
+  });
+
+  @override
+  State<_PPDeskTopAction> createState() => _PPDeskTopActionState();
+}
+
+class _PPDeskTopActionState extends State<_PPDeskTopAction> {
+  bool hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MenuItemButton(
+      style: _ppDeskTopButtonStyle,
+      onHover: (value) => setState(() => hover = value),
+      onPressed: widget.onPressed,
+      child: _PPDeskTopButtonChrome(
+        label: widget.label,
+        assetName: widget.assetName,
+        hover: hover,
+        danger: widget.danger,
+        disabled: widget.onPressed == null,
+      ),
+    );
+  }
+}
+
+const _ppDeskTopButtonStyle = ButtonStyle(
+  padding: MaterialStatePropertyAll(EdgeInsets.zero),
+  overlayColor: MaterialStatePropertyAll(Colors.transparent),
+  backgroundColor: MaterialStatePropertyAll(Colors.transparent),
+);
+
+class _PPDeskTopButtonChrome extends StatelessWidget {
+  final String label;
+  final String assetName;
+  final bool hover;
+  final bool danger;
+  final bool disabled;
+
+  const _PPDeskTopButtonChrome({
+    required this.label,
+    required this.assetName,
+    required this.hover,
+    this.danger = false,
+    this.disabled = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = disabled
+        ? const Color(0xFF98A2B3)
+        : danger
+            ? const Color(0xFFF04438)
+            : const Color(0xFF1D2939);
+    final iconColor = disabled
+        ? const Color(0xFF98A2B3)
+        : danger
+            ? const Color(0xFFF04438)
+            : const Color(0xFF344054);
+    return Container(
+      height: 36,
+      margin: const EdgeInsets.only(left: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color:
+            hover && !disabled ? const Color(0xFFEAF0FF) : Colors.transparent,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SvgPicture.asset(
+            assetName,
+            width: 18,
+            height: 18,
+            colorFilter: ColorFilter.mode(iconColor, BlendMode.srcIn),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+void _ppDeskConnectWithToken(
+  BuildContext context,
+  String id,
+  FFI ffi, {
+  bool isFileTransfer = false,
+}) {
+  final connToken = bind.sessionGetConnToken(sessionId: ffi.sessionId);
+  connect(
+    context,
+    id,
+    isFileTransfer: isFileTransfer,
+    connToken: connToken,
+  );
+}
+
+void _ppDeskToggleChat(FFI ffi) {
+  ffi.chatModel.changeCurrentKey(MessageKey(ffi.id, ChatModel.clientModeID));
+  ffi.chatModel.toggleChatOverlay();
+}
+
+bool _ppDeskCanTakeScreenshot(FFI ffi) {
+  if (!isDesktop ||
+      (ffi.connType != ConnType.defaultConn &&
+          ffi.connType != ConnType.viewCamera)) {
+    return false;
+  }
+  return bind.sessionGetCommonSync(
+          sessionId: ffi.sessionId,
+          key: 'is_screenshot_supported',
+          param: '') ==
+      'true';
+}
+
+void _ppDeskTakeScreenshot(FFI ffi) {
+  if (ffi.ffiModel.timerScreenshot != null) return;
+  final pi = ffi.ffiModel.pi;
+  if (pi.currentDisplay == kAllDisplayValue) {
+    msgBox(
+      ffi.sessionId,
+      'custom-nook-nocancel-hasclose-info',
+      'Take screenshot',
+      'screenshot-merged-screen-not-supported-tip',
+      '',
+      ffi.dialogManager,
+    );
+    return;
+  }
+  bind.sessionTakeScreenshot(
+      sessionId: ffi.sessionId, display: pi.currentDisplay);
+  ffi.ffiModel.timerScreenshot = Timer(const Duration(seconds: 30), () {
+    ffi.ffiModel.timerScreenshot = null;
+  });
+}
+
 class _PinMenu extends StatelessWidget {
   final ToolbarState state;
   const _PinMenu({Key? key, required this.state}) : super(key: key);

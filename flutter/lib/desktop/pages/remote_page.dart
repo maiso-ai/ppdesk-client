@@ -95,11 +95,6 @@ class _RemotePageState extends State<RemotePage>
   // Uses kDefaultPointerLockCenterThrottleMs from consts.dart for the duration.
   Timer? _pointerLockCenterDebounceTimer;
 
-  // We need `_instanceIdOnEnterOrLeaveImage4Toolbar` together with `_onEnterOrLeaveImage4Toolbar`
-  // to identify the toolbar instance and its callback function.
-  int? _instanceIdOnEnterOrLeaveImage4Toolbar;
-  Function(bool)? _onEnterOrLeaveImage4Toolbar;
-
   late FFI _ffi;
   Worker? _waylandKeyboardModeWorker;
   bool _waylandKeyboardModeNormalized = false;
@@ -110,6 +105,8 @@ class _RemotePageState extends State<RemotePage>
   _RemotePageState(String id) {
     _initStates(id);
   }
+
+  void _setFullscreen(bool v) => stateGlobal.setFullscreen(v);
 
   void _initStates(String id) {
     _zoomCursor = PeerBoolOption.find(id, kOptionZoomCursor);
@@ -402,27 +399,15 @@ class _RemotePageState extends State<RemotePage>
       );
 
   Widget buildBody(BuildContext context) {
-    remoteToolbar(BuildContext context) => RemoteToolbar(
+    remoteToolbar(BuildContext context) => PPDeskRemoteTopToolbar(
           id: widget.id,
           ffi: _ffi,
           state: widget.toolbarState,
-          onEnterOrLeaveImageSetter: (id, func) {
-            _instanceIdOnEnterOrLeaveImage4Toolbar = id;
-            _onEnterOrLeaveImage4Toolbar = func;
-          },
-          onEnterOrLeaveImageCleaner: (id) {
-            // If _instanceIdOnEnterOrLeaveImage4Toolbar != id
-            // it means `_onEnterOrLeaveImage4Toolbar` is not set or it has been changed to another toolbar.
-            if (_instanceIdOnEnterOrLeaveImage4Toolbar == id) {
-              _instanceIdOnEnterOrLeaveImage4Toolbar = null;
-              _onEnterOrLeaveImage4Toolbar = null;
-            }
-          },
-          setRemoteState: setState,
+          setFullscreen: _setFullscreen,
         );
 
     bodyWidget() {
-      return Stack(
+      final canvas = Stack(
         children: [
           Container(
               color: kColorCanvas,
@@ -470,19 +455,17 @@ class _RemotePageState extends State<RemotePage>
                             ));
                       }
                     }(),
-              // Use Overlay to enable rebuild every time on menu button click.
-              // Hide toolbar when relative mouse mode is active to prevent
-              // cursor from escaping to toolbar area.
-              Obx(() => _ffi.inputModel.relativeMouseMode.value
-                  ? const Offstage()
-                  : _ffi.ffiModel.pi.isSet.isTrue
-                      ? Overlay(initialEntries: [
-                          OverlayEntry(builder: remoteToolbar)
-                        ])
-                      : remoteToolbar(context)),
               _ffi.ffiModel.pi.isSet.isFalse ? emptyOverlay() : Offstage(),
             ],
           ),
+        ],
+      );
+      return Column(
+        children: [
+          Obx(() => _ffi.inputModel.relativeMouseMode.value
+              ? const SizedBox.shrink()
+              : remoteToolbar(context)),
+          Expanded(child: canvas),
         ],
       );
     }
@@ -540,13 +523,6 @@ class _RemotePageState extends State<RemotePage>
 
     _cursorOverImage.value = true;
     _firstEnterImage.value = true;
-    if (_onEnterOrLeaveImage4Toolbar != null) {
-      try {
-        _onEnterOrLeaveImage4Toolbar!(true);
-      } catch (e) {
-        //
-      }
-    }
 
     // See [onWindowBlur].
     if (!isWindows) {
@@ -566,13 +542,6 @@ class _RemotePageState extends State<RemotePage>
 
     _cursorOverImage.value = false;
     _firstEnterImage.value = false;
-    if (_onEnterOrLeaveImage4Toolbar != null) {
-      try {
-        _onEnterOrLeaveImage4Toolbar!(false);
-      } catch (e) {
-        //
-      }
-    }
 
     // See [onWindowBlur].
     if (!isWindows) {
