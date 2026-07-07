@@ -563,21 +563,27 @@ class QualityMonitor extends StatelessWidget {
   QualityMonitor(this.qualityMonitorModel);
 
   Widget _row(String info, String? value, {Color? rightColor}) {
-    return Row(
-      children: [
-        Expanded(
-            flex: 8,
-            child: AutoSizeText(info,
-                style: TextStyle(color: Color.fromARGB(255, 210, 210, 210)),
-                textAlign: TextAlign.right,
-                maxLines: 1)),
-        Spacer(flex: 1),
-        Expanded(
-            flex: 8,
-            child: AutoSizeText(value ?? '',
-                style: TextStyle(color: rightColor ?? Colors.white),
-                maxLines: 1)),
-      ],
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Expanded(
+              child: AutoSizeText(translate(info),
+                  style: const TextStyle(
+                      color: Color(0xFF66738A),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600),
+                  maxLines: 1)),
+          const SizedBox(width: 12),
+          AutoSizeText(value ?? '',
+              textAlign: TextAlign.right,
+              style: TextStyle(
+                  color: rightColor ?? const Color(0xFF101828),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800),
+              maxLines: 1),
+        ],
+      ),
     );
   }
 
@@ -588,12 +594,23 @@ class QualityMonitor extends StatelessWidget {
           builder: (context, qualityMonitorModel, child) => qualityMonitorModel
                   .show
               ? Container(
-                  constraints: BoxConstraints(maxWidth: 200),
-                  padding: const EdgeInsets.all(8),
-                  color: MyTheme.canvasColor.withAlpha(150),
+                  width: 218,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: .94),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFE1E8F4)),
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      const Text('连接状态',
+                          style: TextStyle(
+                              color: Color(0xFF101828),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800)),
+                      const SizedBox(height: 8),
                       _row("Speed", qualityMonitorModel.data.speed ?? '-'),
                       _row("FPS", qualityMonitorModel.data.fps ?? '-'),
                       // let delay be 0 if fps is 0

@@ -1,11 +1,28 @@
-<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect x="2" y="2" width="44" height="44" rx="11" fill="url(#g)"/>
-  <path d="M18 14.5C18 13.12 19.54 12.3 20.68 13.08L34.05 22.25C35.04 22.93 35.04 24.39 34.05 25.07L20.68 34.24C19.54 35.02 18 34.2 18 32.82V14.5Z" fill="white"/>
-  <circle cx="17" cy="24" r="5" fill="white" fill-opacity=".8"/>
+<svg width="64" height="64" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path fill="url(#tail)" d="M28 76c0-13 11-24 24-24h14c8 0 14 6 14 14v1c0 8-6 14-14 14H55v29c0 9-7 16-16 16h-3c-5 0-8-3-8-8V76Z"/>
+  <path fill-rule="evenodd" clip-rule="evenodd" fill="url(#main)" d="M53 12h34c25 0 45 19 45 43s-20 43-45 43H64c-9 0-16-7-16-16v-2h37c14 0 25-11 25-25S99 30 85 30H59c-9 0-16 7-16 16v21H25c-5 0-9-4-9-9V49c0-21 16-37 37-37Zm11 29h22c8 0 14 6 14 14s-6 14-14 14H64c-8 0-14-6-14-14s6-14 14-14Z"/>
+  <path fill="white" d="M44 54c0-9 10-15 18-10l28 18c7 5 7 15 0 20L62 100c-8 5-18-1-18-10V54Z"/>
+  <path fill="url(#arrow)" d="M55 59c0-5 6-8 10-5l23 15c4 3 4 8 0 11L65 95c-4 3-10 0-10-5V59Z"/>
+  <path fill="url(#shine)" fill-opacity=".35" d="M30 84c4-7 11-12 22-12h20c-3 5-8 8-15 8H44c-7 0-12 5-14 12v-8Z"/>
   <defs>
-    <linearGradient id="g" x1="6" y1="7" x2="43" y2="43" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#2D6BFF"/>
-      <stop offset="1" stop-color="#6B2BFF"/>
+    <linearGradient id="main" x1="18" y1="12" x2="121" y2="104" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#19C2F5"/>
+      <stop offset=".48" stop-color="#2F70FF"/>
+      <stop offset="1" stop-color="#742BFF"/>
+    </linearGradient>
+    <linearGradient id="tail" x1="28" y1="52" x2="68" y2="126" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#238BFF"/>
+      <stop offset=".48" stop-color="#3A67FF"/>
+      <stop offset="1" stop-color="#6D2DFF"/>
+    </linearGradient>
+    <linearGradient id="arrow" x1="55" y1="55" x2="89" y2="93" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#22B8F5"/>
+      <stop offset=".55" stop-color="#2D72FF"/>
+      <stop offset="1" stop-color="#772EFF"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="26" y1="76" x2="70" y2="93" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
     </linearGradient>
   </defs>
 </svg>

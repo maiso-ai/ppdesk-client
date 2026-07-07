@@ -237,13 +237,6 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           color: Colors.white,
           borderRadius: BorderRadius.circular(compact ? 14 : 18),
           border: Border.all(color: const Color(0xFFE4EAF4)),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x0F1B3A6D),
-              blurRadius: 18,
-              offset: Offset(0, 8),
-            ),
-          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -639,7 +632,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                   isDense: true,
                   filled: true,
                   fillColor: Colors.white,
-                  hoverColor: Colors.white,
+                  hoverColor: Colors.transparent,
                   border: InputBorder.none,
                   enabledBorder: InputBorder.none,
                   focusedBorder: InputBorder.none,
@@ -2083,7 +2076,10 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(10),
-      hoverColor: const Color(0xFFEAF0FF),
+      hoverColor: Colors.transparent,
+      splashColor: Colors.transparent,
+      highlightColor: Colors.transparent,
+      focusColor: Colors.transparent,
       child: Container(
         height: 44,
         padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -2734,7 +2730,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                           isDense: true,
                           filled: true,
                           fillColor: Colors.white,
-                          hoverColor: Colors.white,
+                          hoverColor: Colors.transparent,
                           border: InputBorder.none,
                           enabledBorder: InputBorder.none,
                           focusedBorder: InputBorder.none,
@@ -2772,13 +2768,6 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(color: const Color(0xFFE1E8F4)),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Color(0x221B3A6D),
-                              blurRadius: 22,
-                              offset: Offset(0, 10),
-                            ),
-                          ],
                         ),
                         clipBehavior: Clip.antiAlias,
                         child: _ppDeskAllPeersLoader.peers.isEmpty &&
@@ -3013,13 +3002,6 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       color: Colors.white,
       borderRadius: BorderRadius.circular(18),
       border: Border.all(color: const Color(0xFFE1E8F4)),
-      boxShadow: const [
-        BoxShadow(
-          color: Color(0x101B3A6D),
-          blurRadius: 24,
-          offset: Offset(0, 12),
-        ),
-      ],
     );
   }
 
@@ -3947,8 +3929,6 @@ class _PPDeskAutocompleteRow extends StatefulWidget {
 }
 
 class _PPDeskAutocompleteRowState extends State<_PPDeskAutocompleteRow> {
-  bool _hover = false;
-
   String get _name {
     final peer = widget.peer;
     final name = peer.alias.isNotEmpty
@@ -3965,8 +3945,7 @@ class _PPDeskAutocompleteRowState extends State<_PPDeskAutocompleteRow> {
     final statusColor =
         online ? const Color(0xFF20C66B) : const Color(0xFFFF8A1F);
     return MouseRegion(
-      onEnter: (_) => setState(() => _hover = true),
-      onExit: (_) => setState(() => _hover = false),
+      cursor: SystemMouseCursors.click,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: widget.onTap,
@@ -3976,7 +3955,7 @@ class _PPDeskAutocompleteRowState extends State<_PPDeskAutocompleteRow> {
           padding: EdgeInsets.symmetric(
               horizontal: widget.compact ? 12 : 14,
               vertical: widget.compact ? 8 : 10),
-          color: _hover ? const Color(0xFFF7FAFF) : Colors.white,
+          color: Colors.white,
           child: Row(
             children: [
               Container(
@@ -4038,8 +4017,9 @@ class _PPDeskNavItemState extends State<_PPDeskNavItem> {
 
   @override
   Widget build(BuildContext context) {
-    final active = widget.selected || _hover;
-    final color = active ? const Color(0xFF2D6BFF) : const Color(0xFF202B3D);
+    final color = (widget.selected || _hover)
+        ? const Color(0xFF2D6BFF)
+        : const Color(0xFF202B3D);
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),
       onExit: (_) => setState(() => _hover = false),
@@ -4056,7 +4036,8 @@ class _PPDeskNavItemState extends State<_PPDeskNavItem> {
           margin: EdgeInsets.only(bottom: widget.compact ? 8 : 14),
           padding: EdgeInsets.symmetric(horizontal: widget.compact ? 20 : 24),
           decoration: BoxDecoration(
-            color: active ? const Color(0xFFEAF0FF) : Colors.transparent,
+            color:
+                widget.selected ? const Color(0xFFEAF0FF) : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
           ),
           child: Row(
@@ -4071,7 +4052,9 @@ class _PPDeskNavItemState extends State<_PPDeskNavItem> {
               Text(widget.label,
                   style: TextStyle(
                       fontSize: widget.compact ? 16 : 18,
-                      fontWeight: active ? FontWeight.w800 : FontWeight.w500,
+                      fontWeight: widget.selected
+                          ? FontWeight.w800
+                          : (_hover ? FontWeight.w700 : FontWeight.w500),
                       color: color)),
             ],
           ),
@@ -4099,13 +4082,10 @@ class _PPDeskPrimaryButton extends StatefulWidget {
 }
 
 class _PPDeskPrimaryButtonState extends State<_PPDeskPrimaryButton> {
-  bool _hover = false;
-
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
-      onEnter: (_) => setState(() => _hover = true),
-      onExit: (_) => setState(() => _hover = false),
+      cursor: SystemMouseCursors.click,
       child: InkWell(
         onTap: widget.onTap,
         borderRadius: BorderRadius.circular(12),
@@ -4123,14 +4103,6 @@ class _PPDeskPrimaryButtonState extends State<_PPDeskPrimaryButton> {
             gradient: const LinearGradient(
               colors: [Color(0xFF2D6BFF), Color(0xFF5B28FF)],
             ),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF2D6BFF)
-                    .withValues(alpha: _hover ? .30 : .20),
-                blurRadius: _hover ? 24 : 18,
-                offset: const Offset(0, 8),
-              ),
-            ],
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -4233,26 +4205,13 @@ class _PPDeskFilterButton extends StatelessWidget {
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: const Color(0xFFE1E8F4)),
-            boxShadow: const [
-              BoxShadow(
-                  color: Color(0x181B3A6D),
-                  blurRadius: 18,
-                  offset: Offset(0, 8)),
-            ],
           ),
           elevation: 0,
         ),
         menuItemStyleData: MenuItemStyleData(
           height: compact ? 34 : 38,
           padding: const EdgeInsets.symmetric(horizontal: 12),
-          overlayColor: WidgetStateProperty.resolveWith((states) {
-            if (states.contains(WidgetState.hovered) ||
-                states.contains(WidgetState.focused) ||
-                states.contains(WidgetState.pressed)) {
-              return const Color(0xFFEAF0FF);
-            }
-            return Colors.transparent;
-          }),
+          overlayColor: const WidgetStatePropertyAll(Colors.transparent),
         ),
       ),
     );
@@ -4321,26 +4280,13 @@ class _PPDeskMoreMenu extends StatelessWidget {
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: const Color(0xFFE1E8F4)),
-            boxShadow: const [
-              BoxShadow(
-                  color: Color(0x181B3A6D),
-                  blurRadius: 18,
-                  offset: Offset(0, 8)),
-            ],
           ),
           elevation: 0,
         ),
         menuItemStyleData: MenuItemStyleData(
           height: compact ? 34 : 38,
           padding: const EdgeInsets.symmetric(horizontal: 12),
-          overlayColor: WidgetStateProperty.resolveWith((states) {
-            if (states.contains(WidgetState.hovered) ||
-                states.contains(WidgetState.focused) ||
-                states.contains(WidgetState.pressed)) {
-              return const Color(0xFFEAF0FF);
-            }
-            return Colors.transparent;
-          }),
+          overlayColor: const WidgetStatePropertyAll(Colors.transparent),
         ),
       ),
     );
@@ -4365,13 +4311,10 @@ class _PPDeskSmallButton extends StatefulWidget {
 }
 
 class _PPDeskSmallButtonState extends State<_PPDeskSmallButton> {
-  bool _hover = false;
-
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
-      onEnter: (_) => setState(() => _hover = true),
-      onExit: (_) => setState(() => _hover = false),
+      cursor: SystemMouseCursors.click,
       child: InkWell(
         onTap: widget.onTap,
         borderRadius: BorderRadius.circular(8),
@@ -4384,7 +4327,7 @@ class _PPDeskSmallButtonState extends State<_PPDeskSmallButton> {
           height: widget.compact ? 30 : 34,
           padding: EdgeInsets.symmetric(horizontal: widget.compact ? 9 : 12),
           decoration: BoxDecoration(
-            color: _hover ? const Color(0xFFEAF0FF) : Colors.white,
+            color: Colors.white,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(color: const Color(0xFFE1E8F4)),
           ),
@@ -4448,7 +4391,7 @@ class _PPDeskOutlineButtonState extends State<_PPDeskOutlineButton> {
           width: widget.compact ? 118 : 148,
           padding: EdgeInsets.symmetric(horizontal: widget.compact ? 10 : 14),
           decoration: BoxDecoration(
-            color: _hover ? const Color(0xFFF7FAFF) : Colors.white,
+            color: Colors.white,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
                 color:
@@ -4517,7 +4460,7 @@ class _PPDeskPagerButtonState extends State<_PPDeskPagerButton> {
           height: widget.compact ? 34 : 38,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: _hover ? const Color(0xFFEAF0FF) : Colors.white,
+            color: Colors.white,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(color: const Color(0xFFE1E8F4)),
           ),
@@ -4560,8 +4503,9 @@ class _PPDeskSettingsTabItemState extends State<_PPDeskSettingsTabItem> {
 
   @override
   Widget build(BuildContext context) {
-    final active = widget.selected || _hover;
-    final color = active ? const Color(0xFF2D6BFF) : const Color(0xFF344054);
+    final color = (widget.selected || _hover)
+        ? const Color(0xFF2D6BFF)
+        : const Color(0xFF344054);
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),
       onExit: (_) => setState(() => _hover = false),
@@ -4578,7 +4522,8 @@ class _PPDeskSettingsTabItemState extends State<_PPDeskSettingsTabItem> {
           margin: const EdgeInsets.only(bottom: 6),
           padding: EdgeInsets.symmetric(horizontal: widget.compact ? 10 : 12),
           decoration: BoxDecoration(
-            color: active ? const Color(0xFFEAF0FF) : Colors.transparent,
+            color:
+                widget.selected ? const Color(0xFFEAF0FF) : Colors.transparent,
             borderRadius: BorderRadius.circular(9),
           ),
           child: Row(
@@ -4595,8 +4540,9 @@ class _PPDeskSettingsTabItemState extends State<_PPDeskSettingsTabItem> {
                     style: TextStyle(
                         fontSize: widget.compact ? 13 : 14,
                         color: color,
-                        fontWeight:
-                            active ? FontWeight.w800 : FontWeight.w600)),
+                        fontWeight: (widget.selected || _hover)
+                            ? FontWeight.w800
+                            : FontWeight.w600)),
               ),
             ],
           ),
@@ -4809,15 +4755,12 @@ class _PPDeskSettingActionRow extends StatefulWidget {
 }
 
 class _PPDeskSettingActionRowState extends State<_PPDeskSettingActionRow> {
-  bool _hover = false;
-
   @override
   Widget build(BuildContext context) {
     final color =
         widget.danger ? const Color(0xFFE5484D) : const Color(0xFF2D6BFF);
     return MouseRegion(
-      onEnter: (_) => setState(() => _hover = true),
-      onExit: (_) => setState(() => _hover = false),
+      cursor: SystemMouseCursors.click,
       child: InkWell(
         onTap: () async => widget.onTap(),
         borderRadius: BorderRadius.circular(10),
@@ -4827,7 +4770,7 @@ class _PPDeskSettingActionRowState extends State<_PPDeskSettingActionRow> {
         focusColor: Colors.transparent,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
-          color: _hover ? const Color(0xFFF7FAFF) : Colors.transparent,
+          color: Colors.transparent,
           child: _PPDeskSettingBaseRow(
             compact: widget.compact,
             icon: widget.icon,
@@ -4873,19 +4816,13 @@ class _PPDeskSettingSelectRow extends StatefulWidget {
 }
 
 class _PPDeskSettingSelectRowState extends State<_PPDeskSettingSelectRow> {
-  bool _hover = false;
-
   @override
   Widget build(BuildContext context) {
     final color =
         widget.disabled ? const Color(0xFFA1AEC2) : const Color(0xFF2D6BFF);
     return MouseRegion(
-      onEnter: (_) {
-        if (!widget.disabled) setState(() => _hover = true);
-      },
-      onExit: (_) {
-        if (!widget.disabled) setState(() => _hover = false);
-      },
+      cursor:
+          widget.disabled ? SystemMouseCursors.basic : SystemMouseCursors.click,
       child: InkWell(
         onTap: widget.disabled ? null : () async => widget.onTap(),
         borderRadius: BorderRadius.circular(10),
@@ -4895,7 +4832,7 @@ class _PPDeskSettingSelectRowState extends State<_PPDeskSettingSelectRow> {
         focusColor: Colors.transparent,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
-          color: _hover ? const Color(0xFFF7FAFF) : Colors.transparent,
+          color: Colors.transparent,
           child: _PPDeskSettingBaseRow(
             compact: widget.compact,
             icon: widget.icon,
@@ -5007,13 +4944,6 @@ class _PPDeskSettingSwitchRowState extends State<_PPDeskSettingSwitchRow> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: .12),
-                    blurRadius: 5,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
               ),
             ),
           ),
@@ -5156,8 +5086,9 @@ class _PPDeskGroupItemState extends State<_PPDeskGroupItem> {
 
   @override
   Widget build(BuildContext context) {
-    final active = widget.selected || _hover;
-    final color = active ? const Color(0xFF2D6BFF) : const Color(0xFF66738A);
+    final color = (widget.selected || _hover)
+        ? const Color(0xFF2D6BFF)
+        : const Color(0xFF66738A);
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),
       onExit: (_) => setState(() => _hover = false),
@@ -5174,7 +5105,8 @@ class _PPDeskGroupItemState extends State<_PPDeskGroupItem> {
           margin: const EdgeInsets.only(bottom: 6),
           padding: EdgeInsets.symmetric(horizontal: widget.compact ? 10 : 12),
           decoration: BoxDecoration(
-            color: active ? const Color(0xFFEAF0FF) : Colors.transparent,
+            color:
+                widget.selected ? const Color(0xFFEAF0FF) : Colors.transparent,
             borderRadius: BorderRadius.circular(9),
           ),
           child: Row(
@@ -5190,16 +5122,17 @@ class _PPDeskGroupItemState extends State<_PPDeskGroupItem> {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                         fontSize: widget.compact ? 12 : 13,
-                        color: active
+                        color: (widget.selected || _hover)
                             ? const Color(0xFF2D6BFF)
                             : const Color(0xFF344054),
-                        fontWeight:
-                            active ? FontWeight.w800 : FontWeight.w600)),
+                        fontWeight: (widget.selected || _hover)
+                            ? FontWeight.w800
+                            : FontWeight.w600)),
               ),
               Text('${widget.count}',
                   style: TextStyle(
                       fontSize: 12,
-                      color: active
+                      color: (widget.selected || _hover)
                           ? const Color(0xFF2D6BFF)
                           : const Color(0xFF66738A),
                       fontWeight: FontWeight.w700)),
@@ -5262,14 +5195,6 @@ class _PPDeskToolCardState extends State<_PPDeskToolCard> {
                 color: _hover
                     ? widget.tool.color.withValues(alpha: .35)
                     : const Color(0xFFE1E8F4)),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF1B3A6D)
-                    .withValues(alpha: _hover ? .10 : .04),
-                blurRadius: _hover ? 24 : 14,
-                offset: const Offset(0, 10),
-              ),
-            ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -5337,13 +5262,10 @@ class _PPDeskRecentToolCard extends StatefulWidget {
 }
 
 class _PPDeskRecentToolCardState extends State<_PPDeskRecentToolCard> {
-  bool _hover = false;
-
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
-      onEnter: (_) => setState(() => _hover = true),
-      onExit: (_) => setState(() => _hover = false),
+      cursor: SystemMouseCursors.click,
       child: InkWell(
         onTap: widget.tool.onTap,
         borderRadius: BorderRadius.circular(10),
@@ -5355,7 +5277,7 @@ class _PPDeskRecentToolCardState extends State<_PPDeskRecentToolCard> {
           duration: const Duration(milliseconds: 120),
           padding: EdgeInsets.all(widget.compact ? 10 : 12),
           decoration: BoxDecoration(
-            color: _hover ? const Color(0xFFF7FAFF) : Colors.white,
+            color: Colors.white,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(color: const Color(0xFFE1E8F4)),
           ),
@@ -5489,7 +5411,7 @@ class _PPDeskActionTileState extends State<_PPDeskActionTile> {
           height: widget.compact ? 44 : 62,
           padding: EdgeInsets.symmetric(horizontal: widget.compact ? 14 : 20),
           decoration: BoxDecoration(
-            color: _hover ? const Color(0xFFF7FAFF) : Colors.white,
+            color: Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
                 color:
@@ -5581,14 +5503,6 @@ class _PPDeskStatCardState extends State<_PPDeskStatCard> {
               color: _hover
                   ? widget.color.withValues(alpha: .35)
                   : const Color(0xFFE1E8F4)),
-          boxShadow: [
-            BoxShadow(
-              color:
-                  const Color(0xFF1B3A6D).withValues(alpha: _hover ? .10 : .06),
-              blurRadius: _hover ? 26 : 18,
-              offset: const Offset(0, 10),
-            ),
-          ],
         ),
         child: Row(
           children: [
@@ -5705,7 +5619,7 @@ class _PPDeskRecentRowState extends State<_PPDeskRecentRow> {
           height: height,
           padding: EdgeInsets.symmetric(horizontal: widget.compact ? 12 : 16),
           decoration: BoxDecoration(
-            color: _hover ? const Color(0xFFF8FAFF) : Colors.white,
+            color: Colors.white,
             borderRadius: BorderRadius.circular(10),
           ),
           child: Row(
@@ -5848,8 +5762,6 @@ class _PPDeskSessionRow extends StatefulWidget {
 }
 
 class _PPDeskSessionRowState extends State<_PPDeskSessionRow> {
-  bool _hover = false;
-
   @override
   Widget build(BuildContext context) {
     final record = widget.record;
@@ -5860,8 +5772,7 @@ class _PPDeskSessionRowState extends State<_PPDeskSessionRow> {
         color: const Color(0xFF66738A),
         fontWeight: FontWeight.w500);
     return MouseRegion(
-      onEnter: (_) => setState(() => _hover = true),
-      onExit: (_) => setState(() => _hover = false),
+      cursor: SystemMouseCursors.click,
       child: InkWell(
         onTap: widget.onOpen,
         hoverColor: Colors.transparent,
@@ -5872,7 +5783,7 @@ class _PPDeskSessionRowState extends State<_PPDeskSessionRow> {
           duration: const Duration(milliseconds: 120),
           height: rowHeight,
           padding: EdgeInsets.symmetric(horizontal: widget.compact ? 14 : 20),
-          color: _hover ? const Color(0xFFF8FAFF) : Colors.white,
+          color: Colors.white,
           child: Row(
             children: [
               Expanded(
@@ -6086,8 +5997,6 @@ class _PPDeskDeviceRow extends StatefulWidget {
 }
 
 class _PPDeskDeviceRowState extends State<_PPDeskDeviceRow> {
-  bool _hover = false;
-
   @override
   Widget build(BuildContext context) {
     final rowHeight = widget.compact ? 58.0 : 72.0;
@@ -6100,8 +6009,7 @@ class _PPDeskDeviceRowState extends State<_PPDeskDeviceRow> {
         fontWeight: FontWeight.w500);
 
     return MouseRegion(
-      onEnter: (_) => setState(() => _hover = true),
-      onExit: (_) => setState(() => _hover = false),
+      cursor: SystemMouseCursors.click,
       child: InkWell(
         onTap: widget.onConnect,
         hoverColor: Colors.transparent,
@@ -6112,7 +6020,7 @@ class _PPDeskDeviceRowState extends State<_PPDeskDeviceRow> {
           duration: const Duration(milliseconds: 120),
           height: rowHeight,
           padding: EdgeInsets.symmetric(horizontal: widget.compact ? 14 : 20),
-          color: _hover ? const Color(0xFFF8FAFF) : Colors.white,
+          color: Colors.white,
           child: Row(
             children: [
               Expanded(
@@ -6302,7 +6210,7 @@ class _PPDeskIconButtonState extends State<_PPDeskIconButton> {
             height: 34,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: _hover ? const Color(0xFFEAF0FF) : Colors.transparent,
+              color: Colors.transparent,
               borderRadius: BorderRadius.circular(9),
             ),
             child: SvgPicture.asset(

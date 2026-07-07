@@ -374,7 +374,9 @@ class MyTheme {
     // https://stackoverflow.com/questions/77537315/after-upgrading-to-flutter-3-16-the-app-bar-background-color-button-size-and
     useMaterial3: false,
     brightness: Brightness.light,
-    hoverColor: Color.fromARGB(255, 224, 224, 224),
+    hoverColor: (isDesktop || isWebDesktop)
+        ? Colors.transparent
+        : Color.fromARGB(255, 224, 224, 224),
     scaffoldBackgroundColor: Colors.white,
     dialogBackgroundColor: Colors.white,
     appBarTheme: AppBarTheme(
@@ -382,7 +384,7 @@ class MyTheme {
     ),
     dialogTheme: DialogThemeData(
       backgroundColor: Colors.white,
-      elevation: 15,
+      elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(18.0),
         side: BorderSide(
@@ -423,6 +425,7 @@ class MyTheme {
         ? TextButtonThemeData(
             style: TextButton.styleFrom(
               splashFactory: NoSplash.splashFactory,
+              overlayColor: Colors.transparent,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(18.0),
               ),
@@ -432,6 +435,10 @@ class MyTheme {
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: MyTheme.accent,
+        splashFactory: (isDesktop || isWebDesktop)
+            ? NoSplash.splashFactory
+            : InkRipple.splashFactory,
+        overlayColor: (isDesktop || isWebDesktop) ? Colors.transparent : null,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8.0),
         ),
@@ -441,6 +448,10 @@ class MyTheme {
       style: OutlinedButton.styleFrom(
         backgroundColor: grayBg,
         foregroundColor: Colors.black87,
+        splashFactory: (isDesktop || isWebDesktop)
+            ? NoSplash.splashFactory
+            : InkRipple.splashFactory,
+        overlayColor: (isDesktop || isWebDesktop) ? Colors.transparent : null,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8.0),
         ),
@@ -473,7 +484,9 @@ class MyTheme {
   static ThemeData darkTheme = ThemeData(
     useMaterial3: false,
     brightness: Brightness.dark,
-    hoverColor: Color.fromARGB(255, 45, 46, 53),
+    hoverColor: (isDesktop || isWebDesktop)
+        ? Colors.transparent
+        : Color.fromARGB(255, 45, 46, 53),
     scaffoldBackgroundColor: Color(0xFF18191E),
     dialogBackgroundColor: Color(0xFF18191E),
     appBarTheme: AppBarTheme(
@@ -481,7 +494,7 @@ class MyTheme {
     ),
     dialogTheme: DialogThemeData(
       backgroundColor: Color(0xFF18191E),
-      elevation: 15,
+      elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(18.0),
         side: BorderSide(
@@ -525,6 +538,7 @@ class MyTheme {
         ? TextButtonThemeData(
             style: TextButton.styleFrom(
               splashFactory: NoSplash.splashFactory,
+              overlayColor: Colors.transparent,
               disabledForegroundColor: Colors.white70,
               foregroundColor: Colors.white70,
               shape: RoundedRectangleBorder(
@@ -539,6 +553,10 @@ class MyTheme {
         foregroundColor: Colors.white,
         disabledForegroundColor: Colors.white70,
         disabledBackgroundColor: Colors.white10,
+        splashFactory: (isDesktop || isWebDesktop)
+            ? NoSplash.splashFactory
+            : InkRipple.splashFactory,
+        overlayColor: (isDesktop || isWebDesktop) ? Colors.transparent : null,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8.0),
         ),
@@ -550,6 +568,10 @@ class MyTheme {
         side: BorderSide(color: Colors.white12, width: 0.5),
         disabledForegroundColor: Colors.white70,
         foregroundColor: Colors.white70,
+        splashFactory: (isDesktop || isWebDesktop)
+            ? NoSplash.splashFactory
+            : InkRipple.splashFactory,
+        overlayColor: (isDesktop || isWebDesktop) ? Colors.transparent : null,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8.0),
         ),
@@ -1197,8 +1219,8 @@ class CustomAlertDialog extends StatelessWidget {
             scrollable: true,
             backgroundColor: dialogBackground,
             surfaceTintColor: Colors.transparent,
-            elevation: desktopDialog ? 18 : 15,
-            shadowColor: const Color(0x33304A73),
+            elevation: 0,
+            shadowColor: Colors.transparent,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(desktopDialog ? 18 : 16),
               side: BorderSide(color: dialogBorder, width: 1),
@@ -3080,13 +3102,7 @@ Widget dialogButton(String text,
       ),
       textStyle: WidgetStateProperty.all(baseTextStyle),
       splashFactory: NoSplash.splashFactory,
-      overlayColor: WidgetStateProperty.resolveWith((states) {
-        if (states.contains(WidgetState.hovered) ||
-            states.contains(WidgetState.pressed)) {
-          return isOutline ? const Color(0xFFEAF0FF) : const Color(0x1FFFFFFF);
-        }
-        return Colors.transparent;
-      }),
+      overlayColor: WidgetStateProperty.all(Colors.transparent),
     );
     final outlineStyle = commonStyle.copyWith(
       backgroundColor: WidgetStateProperty.resolveWith((states) {
@@ -3834,7 +3850,7 @@ class ComboBox extends StatelessWidget {
       child: Obx(() => DropdownButton<String>(
             isExpanded: true,
             value: ref.value,
-            elevation: 16,
+            elevation: 0,
             underline: Container(),
             style: TextStyle(
                 color: enabled
@@ -4050,20 +4066,6 @@ Widget buildPresetPasswordWarning() {
 
 // https://github.com/leanflutter/window_manager/blob/87dd7a50b4cb47a375b9fc697f05e56eea0a2ab3/lib/src/widgets/virtual_window_frame.dart#L44
 Widget buildVirtualWindowFrame(BuildContext context, Widget child) {
-  boxShadow() => isMainDesktopWindow
-      ? <BoxShadow>[
-          if (stateGlobal.fullscreen.isFalse || stateGlobal.isMaximized.isFalse)
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              offset: Offset(
-                  0.0,
-                  stateGlobal.isFocused.isTrue
-                      ? kFrameBoxShadowOffsetFocused
-                      : kFrameBoxShadowOffsetUnfocused),
-              blurRadius: kFrameBoxShadowBlurRadius,
-            ),
-        ]
-      : null;
   return Obx(
     () => Container(
       decoration: BoxDecoration(
@@ -4079,7 +4081,7 @@ Widget buildVirtualWindowFrame(BuildContext context, Widget child) {
               ? 0
               : kFrameBorderRadius,
         ),
-        boxShadow: boxShadow(),
+        boxShadow: null,
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(

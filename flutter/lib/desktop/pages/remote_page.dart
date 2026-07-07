@@ -4,6 +4,7 @@ import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_hbb/models/state_model.dart';
@@ -140,8 +141,6 @@ class _RemotePageState extends State<RemotePage>
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: []);
-      _ffi.dialogManager
-          .showLoading(translate('Connecting...'), onCancel: closeConnection);
     });
     WakelockManager.enable(_uniqueKey);
 
@@ -400,72 +399,78 @@ class _RemotePageState extends State<RemotePage>
 
   Widget _buildPPDeskConnectingCanvas() {
     return Container(
-      decoration: const BoxDecoration(
-        color: Color(0xFFF4F7FC),
-      ),
+      color: const Color(0xFFF4F7FC),
       child: Center(
         child: Container(
-          width: 360,
-          padding: const EdgeInsets.all(24),
+          width: 330,
+          padding: const EdgeInsets.all(22),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(20),
             border: Border.all(color: const Color(0xFFDCE6F4)),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x14304A73),
-                blurRadius: 28,
-                offset: Offset(0, 16),
-              ),
-            ],
           ),
-          child: Row(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 48,
-                height: 48,
+                width: 56,
+                height: 56,
                 decoration: BoxDecoration(
                   color: const Color(0xFFEAF0FF),
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                child: const Icon(
-                  Icons.desktop_windows_rounded,
-                  color: Color(0xFF2D6BFF),
-                  size: 26,
+                child: Center(
+                  child: SvgPicture.asset(
+                    'assets/ppdesk_device.svg',
+                    width: 28,
+                    height: 28,
+                    colorFilter: const ColorFilter.mode(
+                        Color(0xFF2D6BFF), BlendMode.srcIn),
+                  ),
                 ),
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      translate('Connecting...'),
-                      style: const TextStyle(
-                        color: Color(0xFF101828),
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      widget.id,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Color(0xFF667085),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    const LinearProgressIndicator(
-                      minHeight: 4,
-                      color: Color(0xFF2D6BFF),
-                      backgroundColor: Color(0xFFEAF0FF),
-                    ),
-                  ],
+              const SizedBox(height: 16),
+              Text(
+                translate('Connecting...'),
+                style: const TextStyle(
+                  color: Color(0xFF101828),
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
                 ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                widget.id,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Color(0xFF667085),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 18),
+              const LinearProgressIndicator(
+                minHeight: 4,
+                color: Color(0xFF2D6BFF),
+                backgroundColor: Color(0xFFEAF0FF),
+              ),
+              const SizedBox(height: 18),
+              TextButton(
+                onPressed: closeConnection,
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  backgroundColor: const Color(0xFF2D6BFF),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 28, vertical: 10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  textStyle: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                child: Text(translate('Cancel')),
               ),
             ],
           ),

@@ -327,13 +327,13 @@ class ToolbarState {
 }
 
 class _ToolbarTheme {
-  static const Color blueColor = MyTheme.button;
-  static const Color hoverBlueColor = MyTheme.accent;
-  static Color inactiveColor = Colors.grey[800]!;
-  static Color hoverInactiveColor = Colors.grey[850]!;
+  static const Color blueColor = Color(0xFF2D6BFF);
+  static const Color hoverBlueColor = Colors.transparent;
+  static const Color inactiveColor = Color(0xFF344054);
+  static const Color hoverInactiveColor = Colors.transparent;
 
-  static const Color redColor = Colors.redAccent;
-  static const Color hoverRedColor = Colors.red;
+  static const Color redColor = Color(0xFFF04438);
+  static const Color hoverRedColor = Colors.transparent;
   // kMinInteractiveDimension
   static const double height = 20.0;
   static const double dividerHeight = 12.0;
@@ -342,15 +342,14 @@ class _ToolbarTheme {
   static const double buttonHMargin = 2;
   static const double buttonVMargin = 6;
   static const double iconRadius = 8;
-  static const double elevation = 3;
+  static const double elevation = 0;
 
   static double dividerSpaceToAction = isWindows ? 8 : 14;
 
-  static double menuBorderRadius = isWindows ? 5.0 : 7.0;
-  static EdgeInsets menuPadding = isWindows
-      ? EdgeInsets.fromLTRB(4, 12, 4, 12)
-      : EdgeInsets.fromLTRB(6, 14, 6, 14);
-  static const double menuButtonBorderRadius = 3.0;
+  static const double menuBorderRadius = 12.0;
+  static const EdgeInsets menuPadding =
+      EdgeInsets.symmetric(horizontal: 6, vertical: 8);
+  static const double menuButtonBorderRadius = 8.0;
 
   static Color borderColor(BuildContext context) =>
       MyTheme.color(context).border3 ?? MyTheme.border;
@@ -359,19 +358,29 @@ class _ToolbarTheme {
       MyTheme.color(context).divider;
 
   static MenuStyle defaultMenuStyle(BuildContext context) => MenuStyle(
-        side: MaterialStateProperty.all(BorderSide(
-          width: 1,
-          color: borderColor(context),
-        )),
+        backgroundColor: const MaterialStatePropertyAll(Colors.white),
+        surfaceTintColor: const MaterialStatePropertyAll(Colors.transparent),
+        shadowColor: const MaterialStatePropertyAll(Colors.transparent),
+        elevation: const MaterialStatePropertyAll(0),
+        side: MaterialStateProperty.all(
+            const BorderSide(width: 1, color: Color(0xFFE1E8F4))),
         shape: MaterialStatePropertyAll(RoundedRectangleBorder(
             borderRadius:
                 BorderRadius.circular(_ToolbarTheme.menuBorderRadius))),
         padding: MaterialStateProperty.all(_ToolbarTheme.menuPadding),
       );
   static final defaultMenuButtonStyle = ButtonStyle(
+    minimumSize: MaterialStatePropertyAll(Size(176, 36)),
     backgroundColor: MaterialStatePropertyAll(Colors.transparent),
-    padding: MaterialStatePropertyAll(EdgeInsets.zero),
+    padding: MaterialStatePropertyAll(
+        EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
     overlayColor: MaterialStatePropertyAll(Colors.transparent),
+    foregroundColor: MaterialStatePropertyAll(Color(0xFF101828)),
+    textStyle: MaterialStatePropertyAll(
+      TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+    ),
+    shape: MaterialStatePropertyAll(RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(8)))),
   );
 
   static Widget borderWrapper(
@@ -775,7 +784,7 @@ class _RemoteToolbarState extends State<RemoteToolbar> {
         offstage: _dragging.isTrue,
         child: Material(
           elevation: _ToolbarTheme.elevation,
-          shadowColor: MyTheme.color(context).shadow,
+          shadowColor: Colors.transparent,
           borderRadius: borderRadius,
           child: _DraggableShowHide(
             id: widget.id,
@@ -865,7 +874,7 @@ class _RemoteToolbarState extends State<RemoteToolbar> {
         : SizedBox(height: _ToolbarTheme.buttonHMargin * 2);
     final toolbarMaterial = Material(
       elevation: _ToolbarTheme.elevation,
-      shadowColor: MyTheme.color(context).shadow,
+      shadowColor: Colors.transparent,
       borderRadius: toolbarBorderRadius,
       color: Theme.of(context)
           .menuBarTheme
@@ -982,7 +991,7 @@ class _PPDeskRemoteTopToolbarState extends State<PPDeskRemoteTopToolbar> {
               child: Row(
                 children: [
                   SvgPicture.asset(
-                    'assets/screen.svg',
+                    'assets/ppdesk_device.svg',
                     width: 20,
                     height: 20,
                     colorFilter: const ColorFilter.mode(
@@ -1041,12 +1050,14 @@ class _PPDeskRemoteTopToolbarState extends State<PPDeskRemoteTopToolbar> {
                             ffi: widget.ffi,
                             state: widget.state,
                             setFullscreen: widget.setFullscreen,
+                            ppDeskLabel: '显示',
+                            ppDeskAssetName: 'assets/ppdesk_display.svg',
                           ),
                           _PPDeskTopKeyboardMenu(
                               id: widget.id, ffi: widget.ffi),
                           _PPDeskTopAction(
                             label: '文件传输',
-                            assetName: 'assets/file_transfer.svg',
+                            assetName: 'assets/ppdesk_file.svg',
                             onPressed:
                                 widget.ffi.connType == ConnType.defaultConn &&
                                         isDesktop
@@ -1057,12 +1068,16 @@ class _PPDeskRemoteTopToolbarState extends State<PPDeskRemoteTopToolbar> {
                           ),
                           _PPDeskTopAction(
                             label: '聊天',
-                            assetName: 'assets/chat.svg',
+                            assetName: 'assets/ppdesk_chat.svg',
                             onPressed: () => _ppDeskToggleChat(widget.ffi),
                           ),
                           if (!isWeb)
                             _VoiceCallMenu(id: widget.id, ffi: widget.ffi),
-                          if (!isWeb) const _RecordMenu(),
+                          if (!isWeb)
+                            const _RecordMenu(
+                              ppDeskLabel: '录制',
+                              ppDeskAssetName: 'assets/ppdesk_rec.svg',
+                            ),
                           _PPDeskTopAction(
                             label: '截图',
                             assetName: 'assets/ppdesk_crop.svg',
@@ -1073,7 +1088,7 @@ class _PPDeskRemoteTopToolbarState extends State<PPDeskRemoteTopToolbar> {
                           _PPDeskTopMoreMenu(id: widget.id, ffi: widget.ffi),
                           _PPDeskTopAction(
                             label: '断开连接',
-                            assetName: 'assets/close.svg',
+                            assetName: 'assets/ppdesk_disconnect.svg',
                             danger: true,
                             onPressed: () async {
                               if (await showConnEndAuditDialogCloseCanceled(
@@ -1138,8 +1153,9 @@ class _PPDeskFullscreenButton extends StatelessWidget {
       final fullscreen = stateGlobal.fullscreen.value;
       return _PPDeskTopAction(
         label: fullscreen ? '退出全屏' : '全屏',
-        assetName:
-            fullscreen ? 'assets/fullscreen_exit.svg' : 'assets/fullscreen.svg',
+        assetName: fullscreen
+            ? 'assets/ppdesk_fullscreen_exit.svg'
+            : 'assets/ppdesk_fullscreen.svg',
         onPressed: () => setFullscreen(!fullscreen),
       );
     });
@@ -1171,7 +1187,7 @@ class _PPDeskTopKeyboardMenu extends _KeyboardMenu {
 
     return _PPDeskTopSubmenu(
       label: '键盘',
-      assetName: 'assets/keyboard_mouse.svg',
+      assetName: 'assets/ppdesk_keyboard.svg',
       ffi: sessionFfi,
       menuChildrenGetter: (_) => [
         keyboardMode(),
@@ -1329,8 +1345,7 @@ class _PPDeskTopButtonChrome extends StatelessWidget {
       margin: const EdgeInsets.only(left: 6),
       padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
-        color:
-            hover && !disabled ? const Color(0xFFEAF0FF) : Colors.transparent,
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -1956,12 +1971,16 @@ class _DisplayMenu extends StatefulWidget {
   final ToolbarState state;
   final Function(bool) setFullscreen;
   final Widget pluginItem;
+  final String? ppDeskLabel;
+  final String? ppDeskAssetName;
   _DisplayMenu(
       {Key? key,
       required this.id,
       required this.ffi,
       required this.state,
-      required this.setFullscreen})
+      required this.setFullscreen,
+      this.ppDeskLabel,
+      this.ppDeskAssetName})
       : pluginItem = LocationItem.createLocationItem(
           id,
           ffi,
@@ -2067,7 +2086,8 @@ class _DisplayMenuState extends State<_DisplayMenu> {
 
     return _IconSubmenuButton(
       tooltip: 'Display Settings',
-      svg: "assets/display.svg",
+      svg: widget.ppDeskAssetName ?? "assets/display.svg",
+      label: widget.ppDeskLabel,
       ffi: widget.ffi,
       color: _ToolbarTheme.blueColor,
       hoverColor: _ToolbarTheme.hoverBlueColor,
@@ -2327,7 +2347,7 @@ class _CustomScaleMenuControlsState
         data: SliderTheme.of(context).copyWith(
           activeTrackColor: colorScheme.primary,
           thumbColor: colorScheme.primary,
-          overlayColor: colorScheme.primary.withOpacity(0.1),
+          overlayColor: Colors.transparent,
           showValueIndicator: ShowValueIndicator.never,
           thumbShape: _RectValueThumbShape(
             min: CustomScaleControls.minPercent.toDouble(),
@@ -3211,7 +3231,10 @@ class _VoiceCallMenu extends StatelessWidget {
 }
 
 class _RecordMenu extends StatelessWidget {
-  const _RecordMenu({Key? key}) : super(key: key);
+  final String? ppDeskLabel;
+  final String? ppDeskAssetName;
+  const _RecordMenu({Key? key, this.ppDeskLabel, this.ppDeskAssetName})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -3221,7 +3244,8 @@ class _RecordMenu extends StatelessWidget {
         (recordingModel.start || ffi.permissions['recording'] != false);
     if (!visible) return Offstage();
     return _IconMenuButton(
-      assetName: 'assets/rec.svg',
+      assetName: ppDeskAssetName ?? 'assets/rec.svg',
+      label: ppDeskLabel,
       tooltip: recordingModel.start
           ? 'Stop session recording'
           : 'Start session recording',
@@ -3262,6 +3286,7 @@ class _CloseMenu extends StatelessWidget {
 class _IconMenuButton extends StatefulWidget {
   final String? assetName;
   final Widget? icon;
+  final String? label;
   final String tooltip;
   final Color color;
   final Color hoverColor;
@@ -3274,6 +3299,7 @@ class _IconMenuButton extends StatefulWidget {
     Key? key,
     this.assetName,
     this.icon,
+    this.label,
     required this.tooltip,
     required this.color,
     required this.hoverColor,
@@ -3294,6 +3320,25 @@ class _IconMenuButtonState extends State<_IconMenuButton> {
   @override
   Widget build(BuildContext context) {
     assert(widget.assetName != null || widget.icon != null);
+    if (widget.label != null && widget.assetName != null) {
+      return MenuItemButton(
+        style: _ppDeskTopButtonStyle,
+        onHover: (value) => setState(() {
+          hover = value;
+        }),
+        onPressed: widget.onPressed,
+        child: Tooltip(
+          message: translate(widget.tooltip),
+          child: _PPDeskTopButtonChrome(
+            label: widget.label!,
+            assetName: widget.assetName!,
+            hover: hover,
+            danger: widget.color == _ToolbarTheme.redColor,
+            disabled: widget.onPressed == null,
+          ),
+        ),
+      );
+    }
     final icon = widget.icon ??
         SvgPicture.asset(
           widget.assetName!,
@@ -3344,6 +3389,7 @@ class _IconSubmenuButton extends StatefulWidget {
   final String tooltip;
   final String? svg;
   final Widget? icon;
+  final String? label;
   final Color color;
   final Color hoverColor;
   final List<Widget> Function(_IconSubmenuButtonState state) menuChildrenGetter;
@@ -3355,6 +3401,7 @@ class _IconSubmenuButton extends StatefulWidget {
     Key? key,
     this.svg,
     this.icon,
+    this.label,
     required this.tooltip,
     required this.color,
     required this.hoverColor,
@@ -3379,6 +3426,27 @@ class _IconSubmenuButtonState extends State<_IconSubmenuButton> {
   @override
   Widget build(BuildContext context) {
     assert(widget.svg != null || widget.icon != null);
+    if (widget.label != null && widget.svg != null) {
+      return SubmenuButton(
+        menuStyle: widget.menuStyle ?? _ToolbarTheme.defaultMenuStyle(context),
+        style: _ppDeskTopButtonStyle,
+        onHover: (value) => setState(() {
+          hover = value;
+        }),
+        menuChildren: widget
+            .menuChildrenGetter(this)
+            .map((e) => _buildPointerTrackWidget(e, widget.ffi))
+            .toList(),
+        child: Tooltip(
+          message: translate(widget.tooltip),
+          child: _PPDeskTopButtonChrome(
+            label: widget.label!,
+            assetName: widget.svg!,
+            hover: hover,
+          ),
+        ),
+      );
+    }
     final icon = widget.icon ??
         SvgPicture.asset(
           widget.svg!,
@@ -3459,6 +3527,7 @@ class MenuButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return MenuItemButton(
         key: key,
+        style: _ToolbarTheme.defaultMenuButtonStyle,
         onPressed: onPressed != null
             ? () {
                 if (ffi != null) {
@@ -3468,8 +3537,22 @@ class MenuButton extends StatelessWidget {
               }
             : null,
         trailingIcon: trailingIcon,
-        child: child);
+        child: _ppDeskMenuChild(child));
   }
+}
+
+Widget _ppDeskMenuChild(Widget? child) {
+  return DefaultTextStyle.merge(
+    style: const TextStyle(
+      color: Color(0xFF101828),
+      fontSize: 14,
+      fontWeight: FontWeight.w700,
+    ),
+    child: IconTheme.merge(
+      data: const IconThemeData(color: Color(0xFF344054), size: 18),
+      child: child ?? const SizedBox.shrink(),
+    ),
+  );
 }
 
 class CkbMenuButton extends StatelessWidget {
@@ -3490,7 +3573,8 @@ class CkbMenuButton extends StatelessWidget {
     return CheckboxMenuButton(
       key: key,
       value: value,
-      child: child,
+      style: _ToolbarTheme.defaultMenuButtonStyle,
+      child: _ppDeskMenuChild(child),
       onChanged: onChanged != null
           ? (bool? value) {
               if (ffi != null) {
@@ -3526,7 +3610,8 @@ class RdoMenuButton<T> extends StatelessWidget {
     return RadioMenuButton(
       value: value,
       groupValue: groupValue,
-      child: child,
+      style: _ToolbarTheme.defaultMenuButtonStyle,
+      child: _ppDeskMenuChild(child),
       closeOnActivate: closeOnActivate,
       onChanged: onChanged != null
           ? (T? value) {
@@ -3808,9 +3893,6 @@ class _DraggableShowHideState extends State<_DraggableShowHide> {
         child: child,
         style: buttonStyle.copyWith(
           backgroundColor: MaterialStateProperty.resolveWith((states) {
-            if (states.contains(MaterialState.hovered)) {
-              return (bgColor ?? hoverColor).withOpacity(0.15);
-            }
             return bgColor;
           }),
         ),
@@ -3957,7 +4039,7 @@ class EdgeThicknessControl extends StatelessWidget {
       data: SliderTheme.of(context).copyWith(
         activeTrackColor: colorScheme.primary,
         thumbColor: colorScheme.primary,
-        overlayColor: colorScheme.primary.withOpacity(0.1),
+        overlayColor: Colors.transparent,
         showValueIndicator: ShowValueIndicator.never,
         thumbShape: _RectValueThumbShape(
           min: EdgeThicknessControl.kMin,
@@ -4023,12 +4105,7 @@ class _MinimizedMonitorSwitchButton extends StatelessWidget {
           style: ButtonStyle(
             minimumSize: MaterialStateProperty.all(const Size(0, 0)),
             padding: MaterialStateProperty.all(EdgeInsets.zero),
-            backgroundColor: MaterialStateProperty.resolveWith((states) {
-              if (states.contains(MaterialState.hovered)) {
-                return _ToolbarTheme.blueColor.withOpacity(0.15);
-              }
-              return null;
-            }),
+            backgroundColor: const MaterialStatePropertyAll(Colors.transparent),
           ),
           child: Stack(
             alignment: const Alignment(0, -0.125),
