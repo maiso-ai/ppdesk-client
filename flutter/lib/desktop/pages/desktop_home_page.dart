@@ -132,6 +132,23 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         builder: (context, constraints) {
           final compact =
               constraints.maxWidth < 1180 || constraints.maxHeight < 980;
+          if (_ppDeskPage == 6) {
+            return Container(
+              color: const Color(0xFFF8FAFF),
+              child: Stack(
+                children: [
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: compact ? 22 : 38,
+                      vertical: compact ? 20 : 34,
+                    ),
+                    child: _buildPPDeskLoginPage(compact: compact),
+                  ),
+                  if (_ppDeskShowStartup) _buildPPDeskStartupOverlay(compact),
+                ],
+              ),
+            );
+          }
           final sidebarWidth = compact ? 260.0 : 296.0;
           return Container(
             color: const Color(0xFFF8FAFF),
