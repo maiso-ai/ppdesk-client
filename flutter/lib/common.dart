@@ -1400,8 +1400,17 @@ Widget msgboxIcon(String type) {
     iconData = Icons.info;
   }
   if (iconData != null) {
-    return Icon(iconData, size: 50, color: _msgboxColor(type))
-        .marginOnly(right: 16);
+    final color = _msgboxColor(type) ?? const Color(0xFF2D6BFF);
+    return Container(
+      width: 56,
+      height: 56,
+      margin: const EdgeInsets.only(right: 16),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Icon(iconData, size: 30, color: color),
+    );
   }
 
   return Offstage();
@@ -1430,6 +1439,7 @@ Widget msgboxContent(String type, String title, String text) {
   }
 
   return Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       msgboxIcon(type),
       Expanded(
@@ -1438,8 +1448,13 @@ Widget msgboxContent(String type, String title, String text) {
           children: [
             Text(
               translate(title),
-              style: TextStyle(fontSize: 21),
-            ).marginOnly(bottom: 10),
+              style: const TextStyle(
+                color: Color(0xFF101828),
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                height: 1.2,
+              ),
+            ).marginOnly(bottom: 8),
             createDialogContent(translateText(text)),
           ],
         ),

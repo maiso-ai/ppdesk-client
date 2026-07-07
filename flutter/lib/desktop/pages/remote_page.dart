@@ -398,6 +398,82 @@ class _RemotePageState extends State<RemotePage>
         ),
       );
 
+  Widget _buildPPDeskConnectingCanvas() {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Color(0xFFF4F7FC),
+      ),
+      child: Center(
+        child: Container(
+          width: 360,
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: const Color(0xFFDCE6F4)),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x14304A73),
+                blurRadius: 28,
+                offset: Offset(0, 16),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEAF0FF),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(
+                  Icons.desktop_windows_rounded,
+                  color: Color(0xFF2D6BFF),
+                  size: 26,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      translate('Connecting...'),
+                      style: const TextStyle(
+                        color: Color(0xFF101828),
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      widget.id,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(0xFF667085),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    const LinearProgressIndicator(
+                      minHeight: 4,
+                      color: Color(0xFF2D6BFF),
+                      backgroundColor: Color(0xFFEAF0FF),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget buildBody(BuildContext context) {
     remoteToolbar(BuildContext context) => PPDeskRemoteTopToolbar(
           id: widget.id,
@@ -604,7 +680,7 @@ class _RemotePageState extends State<RemotePage>
             final peerDisplay = CurrentDisplayState.find(widget.id);
             return Obx(
               () => _ffi.ffiModel.pi.isSet.isFalse
-                  ? Container(color: Colors.transparent)
+                  ? _buildPPDeskConnectingCanvas()
                   : Obx(() {
                       _ffi.textureModel.updateCurrentDisplay(peerDisplay.value);
                       return ImagePaint(
