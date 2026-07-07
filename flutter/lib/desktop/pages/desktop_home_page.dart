@@ -7,6 +7,7 @@ import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hbb/common/formatter/id_formatter.dart';
+import 'package:flutter_hbb/common/hbbs/hbbs.dart';
 import 'package:flutter_hbb/common/widgets/autocomplete.dart';
 import 'package:flutter_hbb/common.dart';
 import 'package:flutter_hbb/common/widgets/animated_rotation_widget.dart';
@@ -25,6 +26,7 @@ import 'package:flutter_hbb/models/platform_model.dart';
 import 'package:flutter_hbb/models/peer_model.dart';
 import 'package:flutter_hbb/models/server_model.dart';
 import 'package:flutter_hbb/models/state_model.dart';
+import 'package:flutter_hbb/models/user_model.dart';
 import 'package:flutter_hbb/plugin/ui_manager.dart';
 import 'package:flutter_hbb/utils/multi_window_manager.dart';
 import 'package:flutter_hbb/utils/platform_channel.dart';
@@ -72,6 +74,9 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   final _ppDeskDeviceSearchFocusNode = FocusNode();
   final _ppDeskSessionSearchController = TextEditingController();
   final _ppDeskSessionSearchFocusNode = FocusNode();
+  final _ppDeskLoginEmailController = TextEditingController();
+  final _ppDeskLoginPasswordController = TextEditingController();
+  final _ppDeskLoginEmailFocusNode = FocusNode();
   final Map<String, String> _ppDeskLangLabels = {};
   final _ppDeskAllPeersLoader = AllPeersLoader();
   static const String _ppDeskPeerSourceListenerKey = 'ppdesk_desktop_home_page';
@@ -87,6 +92,14 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   String _ppDeskSessionTime = 'all';
   SettingsTabKey _ppDeskSettingTab = SettingsTabKey.general;
   bool _ppDeskShowStartup = true;
+  bool _ppDeskLoginRemember = true;
+  bool _ppDeskLoginPasswordVisible = false;
+  bool _ppDeskLoginInProgress = false;
+  String? _ppDeskLoginEmailMsg;
+  String? _ppDeskLoginPasswordMsg;
+  String _ppDeskLoginWebAuthState = '';
+  String _ppDeskLoginWebAuthUrl = '';
+  Timer? _ppDeskLoginWebAuthTimer;
 
   @override
   Widget build(BuildContext context) {
@@ -403,7 +416,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         cursor: SystemMouseCursors.click,
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTap: () => setState(() => _ppDeskPage = 5),
+          onTap: () => setState(() => _ppDeskPage = loggedIn ? 5 : 6),
           child: Row(
             children: [
               Stack(
@@ -511,6 +524,12 @@ class _DesktopHomePageState extends State<DesktopHomePage>
             child: _buildPPDeskAccountPage(compact: compact),
           );
         }
+        if (_ppDeskPage == 6) {
+          return Padding(
+            padding: padding,
+            child: _buildPPDeskLoginPage(compact: compact),
+          );
+        }
         return Padding(
           padding: padding,
           child: Column(
@@ -588,6 +607,613 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           ),
         ),
       ],
+    );
+  }
+
+  Future<void> _submitPPDeskLogin() async {
+    if (_ppDeskLoginInProgress) return;
+    final email = _ppDeskLoginEmailController.text.trim();
+    final password = _ppDeskLoginPasswordController.text;
+    setState(() {
+      _ppDeskLoginEmailMsg =
+          email.isEmpty ? translate('Username missed') : null;
+      _ppDeskLoginPasswordMsg =
+          password.isEmpty ? translate('Password missed') : null;
+      _ppDeskLoginWebAuthState = '';
+    });
+    if (email.isEmpty || password.isEmpty) return;
+
+    _ppDeskLoginWebAuthTimer?.cancel();
+    setState(() => _ppDeskLoginInProgress = true);
+    try {
+      final resp = await gFFI.userModel.login(LoginRequest(
+        username: email,
+        password: password,
+        id: await bind.mainGetMyId(),
+        uuid: await bind.mainGetUuid(),
+        autoLogin: _ppDeskLoginRemember,
+        type: HttpType.kAuthReqTypeAccount,
+      ));
+      final ok = await _handlePPDeskLoginResponse(resp, true);
+      if (ok && mounted) {
+        setState(() => _ppDeskPage = 0);
+      }
+    } on RequestException catch (err) {
+      if (mounted) {
+        setState(() => _ppDeskLoginPasswordMsg = translate(err.cause));
+      }
+    } catch (err) {
+      if (mounted) {
+        setState(() => _ppDeskLoginPasswordMsg = 'Unknown Error: $err');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _ppDeskLoginInProgress = false);
+      }
+    }
+  }
+
+  Future<bool> _handlePPDeskLoginResponse(
+      LoginResponse resp, bool storeIfAccessToken) async {
+    switch (resp.type) {
+      case HttpType.kAuthResTypeToken:
+        if (resp.access_token != null) {
+          if (storeIfAccessToken) {
+            await bind.mainSetLocalOption(
+                key: 'access_token', value: resp.access_token!);
+            await bind.mainSetLocalOption(
+                key: 'user_info', value: jsonEncode(resp.user ?? {}));
+          }
+          await UserModel.updateOtherModels();
+          return true;
+        }
+        break;
+      case HttpType.kAuthResTypeEmailCheck:
+        bool? isEmailVerification;
+        if (resp.tfa_type == null ||
+            resp.tfa_type == HttpType.kAuthResTypeEmailCheck) {
+          isEmailVerification = true;
+        } else if (resp.tfa_type == HttpType.kAuthResTypeTfaCheck) {
+          isEmailVerification = false;
+        } else {
+          if (mounted) {
+            setState(() =>
+                _ppDeskLoginPasswordMsg = 'Failed, bad tfa type from server');
+          }
+        }
+        if (isEmailVerification != null) {
+          final res = await ppdesk_login.verificationCodeDialog(
+              resp.user, resp.secret, isEmailVerification);
+          if (res == true) {
+            await UserModel.updateOtherModels();
+            return true;
+          }
+        }
+        break;
+      default:
+        break;
+    }
+    if (mounted && _ppDeskLoginPasswordMsg == null) {
+      setState(
+          () => _ppDeskLoginPasswordMsg = 'Failed, bad response from server');
+    }
+    return false;
+  }
+
+  Future<void> _startPPDeskWebAuth() async {
+    if (_ppDeskLoginInProgress) return;
+    setState(() {
+      _ppDeskLoginInProgress = true;
+      _ppDeskLoginEmailMsg = null;
+      _ppDeskLoginPasswordMsg = null;
+      _ppDeskLoginWebAuthState = '正在获取 WebAuth 配置...';
+      _ppDeskLoginWebAuthUrl = '';
+    });
+    try {
+      final options = await UserModel.queryOidcLoginOptions();
+      if (!mounted) return;
+      if (options.isEmpty) {
+        showToast('当前 API 未开启 WebAuth 登录');
+        setState(() {
+          _ppDeskLoginInProgress = false;
+          _ppDeskLoginWebAuthState = '';
+        });
+        return;
+      }
+      final option = options.first;
+      final op = option is Map ? option['name']?.toString() ?? '' : '$option';
+      if (op.isEmpty) {
+        showToast('WebAuth 配置缺少登录名称');
+        setState(() {
+          _ppDeskLoginInProgress = false;
+          _ppDeskLoginWebAuthState = '';
+        });
+        return;
+      }
+      await bind.mainAccountAuth(op: op, rememberMe: _ppDeskLoginRemember);
+      _ppDeskLoginWebAuthTimer?.cancel();
+      _ppDeskLoginWebAuthTimer =
+          Timer.periodic(const Duration(seconds: 1), (_) {
+        _pollPPDeskWebAuth();
+      });
+      await _pollPPDeskWebAuth();
+    } catch (err) {
+      if (mounted) {
+        setState(() {
+          _ppDeskLoginInProgress = false;
+          _ppDeskLoginWebAuthState = '';
+          _ppDeskLoginPasswordMsg = 'WebAuth 启动失败：$err';
+        });
+      }
+    }
+  }
+
+  Future<void> _pollPPDeskWebAuth() async {
+    final result = await bind.mainAccountAuthResult();
+    if (!mounted || result.isEmpty) return;
+    final resultMap = jsonDecode(result) as Map<String, dynamic>;
+    final stateMsg = resultMap['state_msg']?.toString() ?? '';
+    final failedMsg = resultMap['failed_msg']?.toString() ?? '';
+    final url = resultMap['url']?.toString();
+    final urlLaunched = (resultMap['url_launched'] as bool?) ?? false;
+    final authBody = resultMap['auth_body'];
+
+    if (_ppDeskLoginWebAuthUrl.isEmpty && url != null && url.isNotEmpty) {
+      if (!urlLaunched) {
+        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+      }
+      _ppDeskLoginWebAuthUrl = url;
+    }
+    if (authBody != null) {
+      _ppDeskLoginWebAuthTimer?.cancel();
+      _ppDeskLoginWebAuthTimer = null;
+      try {
+        final resp = gFFI.userModel
+            .getLoginResponseFromAuthBody(Map<String, dynamic>.from(authBody));
+        final ok = await _handlePPDeskLoginResponse(resp, false);
+        if (ok && mounted) {
+          setState(() => _ppDeskPage = 0);
+        }
+      } catch (err) {
+        if (mounted) {
+          setState(() => _ppDeskLoginPasswordMsg = 'WebAuth 登录失败：$err');
+        }
+      } finally {
+        if (mounted) {
+          setState(() {
+            _ppDeskLoginInProgress = false;
+            _ppDeskLoginWebAuthState = '';
+          });
+        }
+      }
+      return;
+    }
+    if (failedMsg.isNotEmpty) {
+      _ppDeskLoginWebAuthTimer?.cancel();
+      _ppDeskLoginWebAuthTimer = null;
+      setState(() {
+        _ppDeskLoginInProgress = false;
+        _ppDeskLoginWebAuthState = '';
+        _ppDeskLoginPasswordMsg = translate(failedMsg);
+      });
+      return;
+    }
+    setState(() {
+      _ppDeskLoginWebAuthState =
+          stateMsg.isEmpty ? '请在浏览器中完成 WebAuth 登录' : translate(stateMsg);
+    });
+  }
+
+  Widget _buildPPDeskLoginPage({required bool compact}) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final narrow = constraints.maxWidth < 860;
+        final cardHeight = compact ? 560.0 : 640.0;
+        final formWidth = compact ? 420.0 : 470.0;
+        final logoSize = compact ? 126.0 : 158.0;
+        final brandPanel = Container(
+          color: const Color(0xFFF4F7FF),
+          alignment: Alignment.center,
+          padding: EdgeInsets.all(compact ? 28 : 42),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Image.asset('assets/ppdesk_logo.png',
+                  width: logoSize, height: logoSize, fit: BoxFit.contain),
+              SizedBox(height: compact ? 30 : 42),
+              Text('皮皮远程',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      fontSize: compact ? 36 : 44,
+                      height: 1.05,
+                      color: const Color(0xFF101828),
+                      fontWeight: FontWeight.w900)),
+              SizedBox(height: compact ? 8 : 12),
+              Text('PPDesk',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      fontSize: compact ? 22 : 28,
+                      color: const Color(0xFF66738A),
+                      fontWeight: FontWeight.w800)),
+              const SizedBox(height: 22),
+              Container(
+                width: 20,
+                height: 3,
+                decoration: BoxDecoration(
+                    color: const Color(0xFF2D6BFF),
+                    borderRadius: BorderRadius.circular(99)),
+              ),
+              const SizedBox(height: 22),
+              Text('安全连接你的远程设备与工作空间',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      fontSize: compact ? 14 : 16,
+                      color: const Color(0xFF66738A),
+                      fontWeight: FontWeight.w700)),
+            ],
+          ),
+        );
+
+        final formPanel = Container(
+          color: Colors.white,
+          alignment: Alignment.center,
+          padding: EdgeInsets.symmetric(
+              horizontal: compact ? 38 : 64, vertical: compact ? 34 : 46),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: formWidth),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text('欢迎登录',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        fontSize: compact ? 32 : 38,
+                        height: 1.1,
+                        color: const Color(0xFF101828),
+                        fontWeight: FontWeight.w900)),
+                const SizedBox(height: 24),
+                Center(
+                  child: Column(
+                    children: [
+                      const Text('邮箱密码登录',
+                          style: TextStyle(
+                              fontSize: 17,
+                              color: Color(0xFF2D6BFF),
+                              fontWeight: FontWeight.w900)),
+                      const SizedBox(height: 10),
+                      Container(
+                        width: 174,
+                        height: 4,
+                        decoration: BoxDecoration(
+                            color: const Color(0xFF2D6BFF),
+                            borderRadius: BorderRadius.circular(99)),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: compact ? 26 : 34),
+                _buildPPDeskLoginField(
+                  label: '邮箱',
+                  hintText: '请输入邮箱地址',
+                  controller: _ppDeskLoginEmailController,
+                  focusNode: _ppDeskLoginEmailFocusNode,
+                  icon: Icons.mail_outline_rounded,
+                  keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.next,
+                  errorText: _ppDeskLoginEmailMsg,
+                  onChanged: (_) {
+                    if (_ppDeskLoginEmailMsg != null) {
+                      setState(() => _ppDeskLoginEmailMsg = null);
+                    }
+                  },
+                ),
+                SizedBox(height: compact ? 16 : 22),
+                _buildPPDeskLoginField(
+                  label: '密码',
+                  hintText: '请输入密码',
+                  controller: _ppDeskLoginPasswordController,
+                  icon: Icons.lock_outline_rounded,
+                  obscureText: !_ppDeskLoginPasswordVisible,
+                  textInputAction: TextInputAction.done,
+                  errorText: _ppDeskLoginPasswordMsg,
+                  onSubmitted: (_) => _submitPPDeskLogin(),
+                  onChanged: (_) {
+                    if (_ppDeskLoginPasswordMsg != null) {
+                      setState(() => _ppDeskLoginPasswordMsg = null);
+                    }
+                  },
+                  suffix: IconButton(
+                    splashRadius: 1,
+                    hoverColor: Colors.transparent,
+                    highlightColor: Colors.transparent,
+                    splashColor: Colors.transparent,
+                    icon: Icon(
+                      _ppDeskLoginPasswordVisible
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
+                      size: 20,
+                      color: const Color(0xFF8A98AD),
+                    ),
+                    onPressed: () => setState(() =>
+                        _ppDeskLoginPasswordVisible =
+                            !_ppDeskLoginPasswordVisible),
+                  ),
+                ),
+                SizedBox(height: compact ? 16 : 22),
+                Row(
+                  children: [
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => setState(
+                          () => _ppDeskLoginRemember = !_ppDeskLoginRemember),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 18,
+                            height: 18,
+                            decoration: BoxDecoration(
+                              color: _ppDeskLoginRemember
+                                  ? const Color(0xFF2D6BFF)
+                                  : Colors.white,
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(
+                                  color: _ppDeskLoginRemember
+                                      ? const Color(0xFF2D6BFF)
+                                      : const Color(0xFFDDE5F2)),
+                            ),
+                            child: _ppDeskLoginRemember
+                                ? const Icon(Icons.check_rounded,
+                                    color: Colors.white, size: 15)
+                                : null,
+                          ),
+                          const SizedBox(width: 10),
+                          const Text('记住我',
+                              style: TextStyle(
+                                  fontSize: 15,
+                                  color: Color(0xFF66738A),
+                                  fontWeight: FontWeight.w700)),
+                        ],
+                      ),
+                    ),
+                    const Spacer(),
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => showToast('请在管理后台或 API 服务中重置密码'),
+                      child: const Text('忘记密码?',
+                          style: TextStyle(
+                              fontSize: 15,
+                              color: Color(0xFF2D6BFF),
+                              fontWeight: FontWeight.w800)),
+                    ),
+                  ],
+                ),
+                if (_ppDeskLoginWebAuthState.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  Text(_ppDeskLoginWebAuthState,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF66738A),
+                          fontWeight: FontWeight.w700)),
+                ],
+                SizedBox(height: compact ? 20 : 28),
+                _buildPPDeskLoginPrimaryButton(),
+                SizedBox(height: compact ? 22 : 28),
+                _buildPPDeskLoginDivider(),
+                SizedBox(height: compact ? 22 : 28),
+                _buildPPDeskWebAuthButton(),
+                SizedBox(height: compact ? 22 : 30),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text('没有账号？',
+                        style: TextStyle(
+                            fontSize: 15,
+                            color: Color(0xFF8A98AD),
+                            fontWeight: FontWeight.w700)),
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => showToast('请先在管理后台创建账号'),
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 8),
+                        child: Text('立即注册',
+                            style: TextStyle(
+                                fontSize: 15,
+                                color: Color(0xFF2D6BFF),
+                                fontWeight: FontWeight.w800)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+
+        return Center(
+          child: SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1120),
+              child: Container(
+                height: narrow ? null : cardHeight,
+                constraints: narrow
+                    ? const BoxConstraints(minHeight: 720)
+                    : const BoxConstraints(),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: const Color(0xFFDDE5F2)),
+                  boxShadow: const [
+                    BoxShadow(
+                        color: Color(0x1A101828),
+                        blurRadius: 28,
+                        offset: Offset(0, 12)),
+                  ],
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: narrow
+                    ? Column(
+                        children: [
+                          SizedBox(height: 300, child: brandPanel),
+                          formPanel,
+                        ],
+                      )
+                    : Row(
+                        children: [
+                          Expanded(child: brandPanel),
+                          Expanded(child: formPanel),
+                        ],
+                      ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPPDeskLoginField({
+    required String label,
+    required String hintText,
+    required TextEditingController controller,
+    required IconData icon,
+    FocusNode? focusNode,
+    bool obscureText = false,
+    TextInputType keyboardType = TextInputType.text,
+    TextInputAction? textInputAction,
+    String? errorText,
+    Widget? suffix,
+    ValueChanged<String>? onChanged,
+    ValueChanged<String>? onSubmitted,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label,
+            style: const TextStyle(
+                fontSize: 15,
+                color: Color(0xFF101828),
+                fontWeight: FontWeight.w800)),
+        const SizedBox(height: 10),
+        Container(
+          height: 56,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(9),
+            border: Border.all(
+              color: errorText == null
+                  ? const Color(0xFFDDE5F2)
+                  : const Color(0xFFE5484D),
+            ),
+          ),
+          child: TextField(
+            controller: controller,
+            focusNode: focusNode,
+            obscureText: obscureText,
+            keyboardType: keyboardType,
+            textInputAction: textInputAction,
+            onChanged: onChanged,
+            onSubmitted: onSubmitted,
+            style: const TextStyle(
+                fontSize: 16,
+                color: Color(0xFF101828),
+                fontWeight: FontWeight.w700),
+            decoration: InputDecoration(
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              hintText: hintText,
+              hintStyle: const TextStyle(
+                  fontSize: 15,
+                  color: Color(0xFFA8B3C7),
+                  fontWeight: FontWeight.w600),
+              prefixIcon: Icon(icon, size: 22, color: const Color(0xFF8A98AD)),
+              suffixIcon: suffix,
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 2, vertical: 17),
+            ),
+          ),
+        ),
+        if (errorText != null && errorText.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 7),
+            child: Text(errorText,
+                style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFFE5484D),
+                    fontWeight: FontWeight.w700)),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildPPDeskLoginPrimaryButton() {
+    return SizedBox(
+      width: double.infinity,
+      height: 54,
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF2D6BFF),
+          disabledBackgroundColor: const Color(0xFFCAD4E6),
+          foregroundColor: Colors.white,
+          disabledForegroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ).copyWith(
+          elevation: const WidgetStatePropertyAll(0),
+          overlayColor: const WidgetStatePropertyAll(Colors.transparent),
+        ),
+        onPressed: _ppDeskLoginInProgress ? null : _submitPPDeskLogin,
+        child: _ppDeskLoginInProgress
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: Colors.white),
+              )
+            : const Text('登录',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+      ),
+    );
+  }
+
+  Widget _buildPPDeskLoginDivider() {
+    return Row(
+      children: const [
+        Expanded(child: Divider(color: Color(0xFFE3EAF5))),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: 18),
+          child: Text('或',
+              style: TextStyle(
+                  color: Color(0xFF9AA8BF),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700)),
+        ),
+        Expanded(child: Divider(color: Color(0xFFE3EAF5))),
+      ],
+    );
+  }
+
+  Widget _buildPPDeskWebAuthButton() {
+    return SizedBox(
+      width: double.infinity,
+      height: 54,
+      child: OutlinedButton.icon(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: const Color(0xFF101828),
+          side: const BorderSide(color: Color(0xFF9DB7FF)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ).copyWith(
+          overlayColor: const WidgetStatePropertyAll(Colors.transparent),
+        ),
+        onPressed: _ppDeskLoginInProgress ? null : _startPPDeskWebAuth,
+        icon: const Icon(Icons.verified_user_outlined,
+            size: 22, color: Color(0xFF2D6BFF)),
+        label: const Text('使用 WebAuth 登录',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
+      ),
     );
   }
 
@@ -1499,7 +2125,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
             onTap: () {
               loggedIn
                   ? ppdesk_login.logOutConfirmDialog()
-                  : ppdesk_login.loginDialog();
+                  : setState(() => _ppDeskPage = 6);
             },
           ),
           _PPDeskSettingActionRow(
@@ -3772,6 +4398,8 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     gFFI.groupModel.addPeerUpdateListener(
         _ppDeskPeerSourceListenerKey, _onPPDeskPeerSourcesChanged);
     _ppDeskIdFocusNode.addListener(_onPPDeskIdFocusChanged);
+    _ppDeskLoginEmailController.text =
+        UserModel.getLocalUserInfo()?['name']?.toString() ?? '';
     Timer(const Duration(milliseconds: 950), () {
       if (mounted) setState(() => _ppDeskShowStartup = false);
     });
@@ -3979,6 +4607,10 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     _ppDeskDeviceSearchController.dispose();
     _ppDeskSessionSearchFocusNode.dispose();
     _ppDeskSessionSearchController.dispose();
+    _ppDeskLoginWebAuthTimer?.cancel();
+    _ppDeskLoginEmailFocusNode.dispose();
+    _ppDeskLoginEmailController.dispose();
+    _ppDeskLoginPasswordController.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
