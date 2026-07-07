@@ -6152,29 +6152,31 @@ void setPasswordDialog({VoidCallback? notEmptyCallback}) async {
     }
 
     return CustomAlertDialog(
-      title: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.key, color: MyTheme.accent),
-          Text(translate("Set Password")).paddingOnly(left: 10),
-        ],
+      title: _ppdeskDialogTitle(
+        icon: Icons.key_rounded,
+        text: translate("Set Password"),
       ),
+      contentBoxConstraints: const BoxConstraints(maxWidth: 520),
       content: ConstrainedBox(
-        constraints: const BoxConstraints(minWidth: 500),
+        constraints: const BoxConstraints(minWidth: 430, maxWidth: 520),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(
-              height: showStatusTipOnMobile ? 0.0 : 6.0,
-            ),
             Row(
               children: [
                 Expanded(
                   child: TextField(
+                    style: const TextStyle(
+                      color: Color(0xFF111827),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
                     obscureText: true,
-                    decoration: InputDecoration(
-                        labelText: translate('Password'),
-                        errorText: errMsg0.isNotEmpty ? errMsg0 : null),
+                    decoration: _ppdeskDialogInputDecoration(
+                      context,
+                      label: translate('Password'),
+                      errorText: errMsg0,
+                    ),
                     controller: p0,
                     autofocus: true,
                     onChanged: (value) {
@@ -6193,18 +6195,25 @@ void setPasswordDialog({VoidCallback? notEmptyCallback}) async {
               children: [
                 Expanded(child: PasswordStrengthIndicator(password: rxPass)),
               ],
-            ).marginOnly(top: 2, bottom: showStatusTipOnMobile ? 2 : 8),
+            ).marginOnly(top: 2, bottom: showStatusTipOnMobile ? 4 : 12),
             SizedBox(
-              height: showStatusTipOnMobile ? 0.0 : 8.0,
+              height: showStatusTipOnMobile ? 0.0 : 4.0,
             ),
             Row(
               children: [
                 Expanded(
                   child: TextField(
+                    style: const TextStyle(
+                      color: Color(0xFF111827),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
                     obscureText: true,
-                    decoration: InputDecoration(
-                        labelText: translate('Confirmation'),
-                        errorText: errMsg1.isNotEmpty ? errMsg1 : null),
+                    decoration: _ppdeskDialogInputDecoration(
+                      context,
+                      label: translate('Confirmation'),
+                      errorText: errMsg1,
+                    ),
                     controller: p1,
                     onChanged: (value) {
                       setState(() {
@@ -6218,36 +6227,20 @@ void setPasswordDialog({VoidCallback? notEmptyCallback}) async {
               ],
             ),
             if (statusTip.isNotEmpty)
-              Row(
-                children: [
-                  Icon(Icons.info, color: Colors.amber, size: 18)
-                      .marginOnly(right: 6),
-                  Expanded(
-                      child: Text(
-                    statusTip,
-                    style: const TextStyle(fontSize: 13, height: 1.1),
-                  ))
-                ],
-              ).marginOnly(top: 6, bottom: 2),
+              _ppdeskDialogTip(statusTip)
+                  .marginOnly(top: showStatusTipOnMobile ? 4 : 10),
             SizedBox(
-              height: showStatusTipOnMobile ? 0.0 : 8.0,
+              height: showStatusTipOnMobile ? 4.0 : 12.0,
             ),
             Obx(() => Wrap(
-                  runSpacing: showStatusTipOnMobile ? 2.0 : 8.0,
-                  spacing: 4,
+                  runSpacing: 8.0,
+                  spacing: 8,
                   children: rules.map((e) {
                     var checked = e.validate(rxPass.value.trim());
-                    return Chip(
-                        label: Text(
-                          e.name,
-                          style: TextStyle(
-                              color: checked
-                                  ? const Color(0xFF0A9471)
-                                  : Color.fromARGB(255, 198, 86, 157)),
-                        ),
-                        backgroundColor: checked
-                            ? const Color(0xFFD0F7ED)
-                            : Color.fromARGB(255, 247, 205, 232));
+                    return _PPDeskPasswordRuleChip(
+                      label: e.name,
+                      checked: checked,
+                    );
                   }).toList(),
                 ))
           ],
@@ -6256,13 +6249,13 @@ void setPasswordDialog({VoidCallback? notEmptyCallback}) async {
       actions: (() {
         final cancelButton = dialogButton(
           "Cancel",
-          icon: Icon(Icons.close_rounded),
+          icon: const Icon(Icons.close_rounded, size: 18),
           onPressed: close,
           isOutline: true,
         );
         final removeButton = dialogButton(
           "Remove",
-          icon: Icon(Icons.delete_outline_rounded),
+          icon: const Icon(Icons.delete_outline_rounded, size: 18),
           onPressed: () async {
             setState(() {
               errMsg0 = "";
@@ -6278,12 +6271,19 @@ void setPasswordDialog({VoidCallback? notEmptyCallback}) async {
             }
             close();
           },
-          buttonStyle:
-              ButtonStyle(backgroundColor: WidgetStatePropertyAll(Colors.red)),
+          buttonStyle: ButtonStyle(
+            backgroundColor: WidgetStateProperty.resolveWith((states) {
+              if (states.contains(WidgetState.hovered)) {
+                return const Color(0xFFDC2626);
+              }
+              return const Color(0xFFEF4444);
+            }),
+            foregroundColor: WidgetStateProperty.all(Colors.white),
+          ),
         );
         final okButton = dialogButton(
           "OK",
-          icon: Icon(Icons.done_rounded),
+          icon: const Icon(Icons.done_rounded, size: 18),
           onPressed: canSubmit ? submit : null,
         );
         if (!isDesktop && !isWebDesktop && localPasswordSet) {
@@ -6317,4 +6317,156 @@ void setPasswordDialog({VoidCallback? notEmptyCallback}) async {
       onCancel: close,
     );
   });
+}
+
+Widget _ppdeskDialogTitle({required IconData icon, required String text}) {
+  return Row(
+    mainAxisAlignment: MainAxisAlignment.center,
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Container(
+        width: 32,
+        height: 32,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: const Color(0xFFEAF0FF),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(icon, color: const Color(0xFF2D6BFF), size: 19),
+      ),
+      const SizedBox(width: 10),
+      Flexible(
+        child: Text(
+          text,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            color: Color(0xFF111827),
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+            height: 1.2,
+          ),
+        ),
+      ),
+    ],
+  );
+}
+
+InputDecoration _ppdeskDialogInputDecoration(
+  BuildContext context, {
+  required String label,
+  required String errorText,
+}) {
+  return InputDecoration(
+    labelText: label,
+    errorText: errorText.isNotEmpty ? errorText : null,
+    floatingLabelBehavior: FloatingLabelBehavior.always,
+    filled: true,
+    fillColor: Colors.white,
+    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(10),
+      borderSide: const BorderSide(color: Color(0xFFDCE6F4), width: 1),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(10),
+      borderSide: const BorderSide(color: Color(0xFF2D6BFF), width: 1.6),
+    ),
+    errorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(10),
+      borderSide: const BorderSide(color: Color(0xFFEF4444), width: 1.2),
+    ),
+    focusedErrorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(10),
+      borderSide: const BorderSide(color: Color(0xFFEF4444), width: 1.6),
+    ),
+    labelStyle: const TextStyle(
+      color: Color(0xFF2D6BFF),
+      fontSize: 13,
+      fontWeight: FontWeight.w700,
+    ),
+    counterStyle: const TextStyle(
+      color: Color(0xFF8A98AD),
+      fontSize: 12,
+      fontWeight: FontWeight.w600,
+    ),
+  );
+}
+
+Widget _ppdeskDialogTip(String text) {
+  return Container(
+    width: double.infinity,
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+    decoration: BoxDecoration(
+      color: const Color(0xFFFFF7E6),
+      borderRadius: BorderRadius.circular(10),
+      border: Border.all(color: const Color(0xFFFFD89B)),
+    ),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Icon(Icons.info_outline_rounded,
+                color: Color(0xFFF59E0B), size: 17)
+            .marginOnly(top: 1, right: 7),
+        Expanded(
+          child: Text(
+            text,
+            style: const TextStyle(
+              color: Color(0xFF77521C),
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              height: 1.25,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _PPDeskPasswordRuleChip extends StatelessWidget {
+  const _PPDeskPasswordRuleChip({
+    required this.label,
+    required this.checked,
+  });
+
+  final String label;
+  final bool checked;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = checked ? const Color(0xFF16A34A) : const Color(0xFFBD4A8F);
+    final background =
+        checked ? const Color(0xFFE6F8EE) : const Color(0xFFFFE4F3);
+    final border = checked ? const Color(0xFFBFEED1) : const Color(0xFFF8B9DC);
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 140),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: border),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            checked ? Icons.check_rounded : Icons.circle_outlined,
+            color: color,
+            size: 14,
+          ),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              height: 1,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

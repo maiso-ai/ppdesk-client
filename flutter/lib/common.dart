@@ -1093,6 +1093,80 @@ class CustomAlertDialog extends StatelessWidget {
     bool tabTapped = false;
     if (isAndroid) gFFI.invokeMethod("enable_soft_keyboard", true);
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final dialogBackground =
+        isDark ? const Color(0xFF181B22) : const Color(0xFFFFFFFF);
+    final dialogBorder =
+        isDark ? const Color(0xFF2A3140) : const Color(0xFFDCE6F4);
+    final titleColor =
+        isDark ? const Color(0xFFE6EDF8) : const Color(0xFF111827);
+    final bodyColor =
+        isDark ? const Color(0xFFB9C3D4) : const Color(0xFF5E6B85);
+    final desktopDialog = isDesktop || isWebDesktop;
+
+    final dialogTheme = Theme.of(context).copyWith(
+      inputDecorationTheme: Theme.of(context).inputDecorationTheme.copyWith(
+            filled: true,
+            fillColor: isDark ? const Color(0xFF202634) : Colors.white,
+            isDense: true,
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+            labelStyle: const TextStyle(
+              color: Color(0xFF2D6BFF),
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+            hintStyle: const TextStyle(
+              color: Color(0xFF9AA8BF),
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: dialogBorder, width: 1),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide:
+                  const BorderSide(color: Color(0xFF2D6BFF), width: 1.6),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide:
+                  const BorderSide(color: Color(0xFFEF4444), width: 1.2),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide:
+                  const BorderSide(color: Color(0xFFEF4444), width: 1.6),
+            ),
+            counterStyle: const TextStyle(
+              color: Color(0xFF8A98AD),
+              fontSize: 12,
+            ),
+          ),
+      textSelectionTheme: const TextSelectionThemeData(
+        cursorColor: Color(0xFF2D6BFF),
+        selectionColor: Color(0x332D6BFF),
+        selectionHandleColor: Color(0xFF2D6BFF),
+      ),
+    );
+
+    final EdgeInsetsGeometry resolvedTitlePadding = titlePadding ??
+        (desktopDialog
+            ? const EdgeInsets.fromLTRB(28, 24, 28, 0)
+            : MyTheme.dialogTitlePadding());
+    final EdgeInsetsGeometry resolvedContentPadding = desktopDialog
+        ? EdgeInsets.fromLTRB(
+            28, title == null ? 24 : 20, 28, actions == null ? 28 : 20)
+        : MyTheme.dialogContentPadding(actions: actions is List);
+    final EdgeInsetsGeometry resolvedActionsPadding = desktopDialog
+        ? const EdgeInsets.fromLTRB(28, 0, 28, 24)
+        : MyTheme.dialogActionsPadding();
+    final EdgeInsetsGeometry resolvedButtonPadding = desktopDialog
+        ? const EdgeInsets.only(left: 10)
+        : MyTheme.dialogButtonPadding;
+
     return FocusScope(
       node: scopeNode,
       autofocus: true,
@@ -1117,19 +1191,42 @@ class CustomAlertDialog extends StatelessWidget {
         }
         return KeyEventResult.ignored;
       },
-      child: AlertDialog(
-          scrollable: true,
-          title: title,
-          content: ConstrainedBox(
-            constraints: contentBoxConstraints,
-            child: content,
-          ),
-          actions: actions,
-          titlePadding: titlePadding ?? MyTheme.dialogTitlePadding(),
-          contentPadding:
-              MyTheme.dialogContentPadding(actions: actions is List),
-          actionsPadding: MyTheme.dialogActionsPadding(),
-          buttonPadding: MyTheme.dialogButtonPadding),
+      child: Theme(
+        data: dialogTheme,
+        child: AlertDialog(
+            scrollable: true,
+            backgroundColor: dialogBackground,
+            surfaceTintColor: Colors.transparent,
+            elevation: desktopDialog ? 18 : 15,
+            shadowColor: const Color(0x33304A73),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(desktopDialog ? 18 : 16),
+              side: BorderSide(color: dialogBorder, width: 1),
+            ),
+            clipBehavior: Clip.antiAlias,
+            title: title,
+            titleTextStyle: TextStyle(
+              color: titleColor,
+              fontSize: desktopDialog ? 21 : 19,
+              fontWeight: FontWeight.w800,
+              height: 1.2,
+            ),
+            content: ConstrainedBox(
+              constraints: contentBoxConstraints,
+              child: content,
+            ),
+            contentTextStyle: TextStyle(
+              color: bodyColor,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              height: 1.35,
+            ),
+            actions: actions,
+            titlePadding: resolvedTitlePadding,
+            contentPadding: resolvedContentPadding,
+            actionsPadding: resolvedActionsPadding,
+            buttonPadding: resolvedButtonPadding),
+      ),
     );
   }
 }
@@ -2956,29 +3053,94 @@ Widget dialogButton(String text,
     TextStyle? style,
     ButtonStyle? buttonStyle}) {
   if (isDesktop || isWebDesktop) {
+    final translated = translate(text);
+    final baseTextStyle =
+        style ?? const TextStyle(fontSize: 14, fontWeight: FontWeight.w700);
+    final commonStyle = ButtonStyle(
+      minimumSize: WidgetStateProperty.all(const Size(0, 38)),
+      padding: WidgetStateProperty.all(
+          const EdgeInsets.symmetric(horizontal: 18, vertical: 0)),
+      shape: WidgetStateProperty.all(
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+      textStyle: WidgetStateProperty.all(baseTextStyle),
+      splashFactory: NoSplash.splashFactory,
+      overlayColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.hovered) ||
+            states.contains(WidgetState.pressed)) {
+          return isOutline ? const Color(0xFFEAF0FF) : const Color(0x1FFFFFFF);
+        }
+        return Colors.transparent;
+      }),
+    );
+    final outlineStyle = commonStyle.copyWith(
+      backgroundColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.disabled)) {
+          return const Color(0xFFF4F7FB);
+        }
+        return Colors.white;
+      }),
+      foregroundColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.disabled)) {
+          return const Color(0xFFB6C1D2);
+        }
+        if (states.contains(WidgetState.hovered)) {
+          return const Color(0xFF2D6BFF);
+        }
+        return const Color(0xFF24324A);
+      }),
+      side: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.hovered)) {
+          return const BorderSide(color: Color(0xFF8FB0FF), width: 1);
+        }
+        return const BorderSide(color: Color(0xFFDCE6F4), width: 1);
+      }),
+    ).merge(buttonStyle);
+    final filledStyle = commonStyle
+        .copyWith(
+          elevation: WidgetStateProperty.all(0),
+          backgroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.disabled)) {
+              return const Color(0xFFE5EAF3);
+            }
+            if (states.contains(WidgetState.hovered)) {
+              return const Color(0xFF215CFF);
+            }
+            return const Color(0xFF2D6BFF);
+          }),
+          foregroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.disabled)) {
+              return const Color(0xFF9AA8BF);
+            }
+            return Colors.white;
+          }),
+        )
+        .merge(buttonStyle);
     if (isOutline) {
       return icon == null
           ? OutlinedButton(
+              style: outlineStyle,
               onPressed: onPressed,
-              child: Text(translate(text), style: style),
+              child: Text(translated, style: style),
             )
           : OutlinedButton.icon(
+              style: outlineStyle,
               icon: icon,
               onPressed: onPressed,
-              label: Text(translate(text), style: style),
+              label: Text(translated, style: style),
             );
     } else {
       return icon == null
           ? ElevatedButton(
-              style: ElevatedButton.styleFrom(elevation: 0).merge(buttonStyle),
+              style: filledStyle,
               onPressed: onPressed,
-              child: Text(translate(text), style: style),
+              child: Text(translated, style: style),
             )
           : ElevatedButton.icon(
               icon: icon,
-              style: ElevatedButton.styleFrom(elevation: 0).merge(buttonStyle),
+              style: filledStyle,
               onPressed: onPressed,
-              label: Text(translate(text), style: style),
+              label: Text(translated, style: style),
             );
     }
   } else {

@@ -80,21 +80,35 @@ class PasswordStrengthIndicator extends StatelessWidget {
   Widget build(BuildContext context) {
     return Obx(() {
       var strength = estimatePasswordStrength(password.value);
+      final activeColor = _getColor(strength);
+      final inactiveColor = Theme.of(context).brightness == Brightness.dark
+          ? const Color(0xFF2A3140)
+          : const Color(0xFFE7EDF7);
       return Row(
         children: [
           Expanded(
-              child: _indicator(
-                  password.isEmpty ? Colors.grey : _getColor(strength))),
+              child:
+                  _indicator(password.isEmpty ? inactiveColor : activeColor)),
+          const SizedBox(width: 5),
           Expanded(
               child: _indicator(password.isEmpty || strength < weakMedium
-                  ? Colors.grey
-                  : _getColor(strength))),
+                  ? inactiveColor
+                  : activeColor)),
+          const SizedBox(width: 5),
           Expanded(
               child: _indicator(password.isEmpty || strength < mediumStrong
-                  ? Colors.grey
-                  : _getColor(strength))),
-          Text(password.isEmpty ? '' : translate(_getLabel(strength)))
-              .marginOnly(left: password.isEmpty ? 0 : 8),
+                  ? inactiveColor
+                  : activeColor)),
+          if (password.isNotEmpty)
+            Text(
+              translate(_getLabel(strength)),
+              style: TextStyle(
+                color: activeColor,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                height: 1,
+              ),
+            ).marginOnly(left: 8),
         ],
       );
     });
@@ -102,8 +116,11 @@ class PasswordStrengthIndicator extends StatelessWidget {
 
   Widget _indicator(Color color) {
     return Container(
-      height: 8,
-      color: color,
+      height: 7,
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(999),
+      ),
     );
   }
 
@@ -119,11 +136,11 @@ class PasswordStrengthIndicator extends StatelessWidget {
 
   Color _getColor(double strength) {
     if (strength < weakMedium) {
-      return Colors.yellow;
+      return const Color(0xFFF59E0B);
     } else if (strength < mediumStrong) {
-      return Colors.blue;
+      return const Color(0xFF2D6BFF);
     } else {
-      return Colors.green;
+      return const Color(0xFF22C55E);
     }
   }
 }
