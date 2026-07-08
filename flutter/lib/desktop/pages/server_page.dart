@@ -665,10 +665,10 @@ class _PrivilegeBoardState extends State<_PrivilegeBoard> {
                 checkClickTime(widget.client.id, () => onTap?.call(!enabled))
             : null,
         child: Container(
-          padding: EdgeInsets.symmetric(horizontal: 7.0, vertical: 8.0),
+          padding: EdgeInsets.symmetric(horizontal: 4.0, vertical: 7.0),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(16.0),
+            borderRadius: BorderRadius.circular(14.0),
             border: Border.all(
               color: enabled
                   ? _ppDeskBlue.withValues(alpha: canModify ? 0.28 : 0.16)
@@ -681,9 +681,9 @@ class _PrivilegeBoardState extends State<_PrivilegeBoard> {
               _ppDeskSvg(
                 icon,
                 color: enabled ? _ppDeskBlue : Color(0xFF98A2B3),
-                size: 27,
+                size: 22,
               ),
-              SizedBox(height: 5.0),
+              SizedBox(height: 4.0),
               Text(
                 label,
                 maxLines: 1,
@@ -691,11 +691,11 @@ class _PrivilegeBoardState extends State<_PrivilegeBoard> {
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: _ppDeskText,
-                  fontSize: 12.5,
+                  fontSize: 11,
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              SizedBox(height: 6.0),
+              SizedBox(height: 5.0),
               _PpDeskPermissionSwitch(
                 enabled: enabled,
                 disabled: !canModify,
@@ -716,7 +716,7 @@ class _PrivilegeBoardState extends State<_PrivilegeBoard> {
             'N';
     return Container(
       width: double.infinity,
-      height: client.type_() == ClientType.camera ? 154.0 : 258.0,
+      height: client.type_() == ClientType.camera ? 136.0 : 232.0,
       margin: EdgeInsets.only(bottom: 8.0),
       padding: EdgeInsets.symmetric(horizontal: 4.0),
       decoration: BoxDecoration(
@@ -776,7 +776,7 @@ class _PrivilegeBoardState extends State<_PrivilegeBoard> {
               padding: EdgeInsets.zero,
               mainAxisSpacing: spacing,
               crossAxisSpacing: spacing,
-              childAspectRatio: 0.9,
+              childAspectRatio: 0.72,
               children: client.type_() == ClientType.camera
                   ? [
                       buildPermissionIcon(
@@ -959,8 +959,8 @@ class _PpDeskPermissionSwitch extends StatelessWidget {
         ? (disabled ? _ppDeskBlue.withValues(alpha: 0.45) : _ppDeskBlue)
         : Color(0xFFD8DFEA);
     return Container(
-      width: 34,
-      height: 18,
+      width: 28,
+      height: 15,
       padding: EdgeInsets.all(2.0),
       decoration: BoxDecoration(
         color: bg,
@@ -969,8 +969,8 @@ class _PpDeskPermissionSwitch extends StatelessWidget {
       child: Align(
         alignment: enabled ? Alignment.centerRight : Alignment.centerLeft,
         child: Container(
-          width: 14,
-          height: 14,
+          width: 11,
+          height: 11,
           decoration: BoxDecoration(
             color: Colors.white,
             shape: BoxShape.circle,
@@ -1277,7 +1277,7 @@ class _CmControlPanel extends StatelessWidget {
     final borderRadius = BorderRadius.circular(10.0);
     final isTransparent = color == Colors.transparent || color == null;
     final btn = Container(
-      height: 42,
+      height: 38,
       decoration: BoxDecoration(
           color: isTransparent ? Colors.white : color,
           gradient: color == MyTheme.accent
@@ -1304,7 +1304,7 @@ class _CmControlPanel extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Offstage(offstage: icon == null, child: icon).marginOnly(right: 5),
+            Offstage(offstage: icon == null, child: icon).marginOnly(right: 4),
             textWidget,
           ],
         ),
@@ -1316,7 +1316,7 @@ class _CmControlPanel extends StatelessWidget {
                 child: btn,
               )
             : btn)
-        .marginAll(4);
+        .marginAll(3);
   }
 
   void handleDisconnect() {
