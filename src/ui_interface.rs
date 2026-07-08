@@ -482,6 +482,9 @@ pub fn install_options() -> String {
 
 #[inline]
 pub fn get_socks() -> Vec<String> {
+    if crate::ppdesk_policy::proxy_locked() {
+        return Vec::new();
+    }
     #[cfg(not(any(target_os = "android", target_os = "ios")))]
     let s = ipc::get_socks();
     #[cfg(any(target_os = "android", target_os = "ios"))]
@@ -500,6 +503,9 @@ pub fn get_socks() -> Vec<String> {
 
 #[inline]
 pub fn set_socks(proxy: String, username: String, password: String) {
+    if crate::ppdesk_policy::proxy_locked() {
+        return;
+    }
     let socks = config::Socks5Server {
         proxy,
         username,
