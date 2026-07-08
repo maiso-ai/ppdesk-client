@@ -3499,7 +3499,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         Expanded(
           child: LayoutBuilder(
             builder: (context, constraints) {
-              final short = constraints.maxHeight < 540;
+              final short = constraints.maxHeight < 620;
               final content = Column(
                 mainAxisSize: short ? MainAxisSize.min : MainAxisSize.max,
                 children: [
@@ -3514,7 +3514,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                         crossAxisCount: columns,
                         crossAxisSpacing: compact ? 10 : 14,
                         mainAxisSpacing: compact ? 10 : 14,
-                        childAspectRatio: compact ? 2.45 : 2.25,
+                        mainAxisExtent: compact ? 146 : 168,
                       ),
                       itemBuilder: (_, index) => _PPDeskToolCard(
                         tool: tools[index],
